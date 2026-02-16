@@ -1,0 +1,124 @@
+/* --- Main Theme Colors --- */
+:root {
+    --bg-color-main: #1e1a4a;      /* AAU Dark Blue from image */
+    --bg-color-container: #2a2a3a; /* Slightly lighter dark blue-grey for the card */
+    --text-color-primary: #ffffff; /* White text for contrast */
+    --text-color-secondary: #cccccc; /* Light grey for less important text */
+    --accent-color: #ffc107;       /* Amber/Gold for primary actions */
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: var(--bg-color-main);
+    color: var(--text-color-primary);
+    text-align: center;
+    padding: 20px;
+    margin: 0;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.container {
+    width: 100%;
+    max-width: 500px;
+    margin: 0 auto;
+    background-color: var(--bg-color-container);
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.5); /* Stronger shadow for depth */
+}
+
+h1 {
+    margin-top: 0;
+    color: var(--text-color-primary);
+    font-weight: 600;
+}
+
+h3 {
+    color: var(--text-color-secondary);
+    font-weight: 400;
+}
+
+/* --- Helpers --- */
+.hidden { display: none; }
+
+/* --- Buttons --- */
+button {
+    display: block;
+    width: 100%;
+    padding: 15px;
+    margin: 15px 0;
+    border: none;
+    border-radius: 8px;
+    font-size: 18px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s, transform 0.1s;
+}
+
+button:active {
+    transform: scale(0.98);
+}
+
+/* Primary uses Amber for high contrast against the dark blue */
+.btn-primary { background-color: var(--accent-color); color: #212529; }
+.btn-primary:hover { background-color: #e0a800; }
+
+.btn-secondary { background-color: #6c757d; color: white; }
+.btn-secondary:hover { background-color: #5a6268; }
+
+.btn-success { background-color: #28a745; color: white; }
+.btn-success:hover { background-color: #218838; }
+
+.btn-danger { background-color: #dc3545; color: white; }
+.btn-danger:hover { background-color: #c82333; }
+
+.btn-text {
+    background-color: transparent;
+    color: var(--text-color-secondary);
+    text-decoration: underline;
+    font-weight: 400;
+    font-size: 16px;
+}
+.btn-text:hover { color: var(--text-color-primary); }
+
+/* --- Inputs & Scanner --- */
+/* Inputs must be light to be readable */
+input, textarea {
+    width: 100%;
+    padding: 12px;
+    margin: 10px 0;
+    box-sizing: border-box;
+    border: 2px solid #444;
+    border-radius: 8px;
+    font-size: 16px;
+    background-color: #ffffff; /* White background for input */
+    color: #000000; /* Black text for input */
+}
+
+input:focus, textarea:focus {
+    outline: none;
+    border-color: var(--accent-color);
+}
+
+textarea {
+    resize: vertical;
+    height: 100px;
+}
+
+/* Add a border to the scanner to define it */
+#reader {
+    width: 100%;
+    border: 3px solid var(--accent-color);
+    border-radius: 8px;
+    overflow: hidden;
+    background-color: #000; /* Placeholder color before camera loads */
+}
+
+/* Highlight the scanned card ID */
+#display-card-id {
+    color: var(--accent-color);
+    font-weight: 700;
+}

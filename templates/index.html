@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VAP-LAB Rental System</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+</head>
+<body>
+
+    <div class="container">
+        <h1>VAP-LAB Equipment Rental</h1>
+
+        <div id="view-menu">
+            <button onclick="startScanner()" class="btn-primary">📷 Scan AAU Card</button>
+            <button onclick="showManualInput()" class="btn-secondary">⌨️ Type AAU Card Number</button>
+        </div>
+
+        <div id="view-scanner" class="hidden">
+            <div id="reader"></div>
+            <button onclick="stopScanner()" class="btn-danger">Cancel</button>
+        </div>
+
+        <div id="view-manual" class="hidden">
+            <input type="text" id="manual-card-id" placeholder="Enter Card ID (e.g. 123456)">
+            <button onclick="handleManualInput()" class="btn-success">Next</button>
+            <button onclick="resetView()" class="btn-text">Back</button>
+        </div>
+
+        <div id="view-form" class="hidden">
+            <h3>Student: <span id="display-card-id">...</span></h3>
+            <textarea id="rental-note" placeholder="What are you renting? (e.g. Camera Kit 2)"></textarea>
+            <button onclick="submitRental()" class="btn-primary">Confirm Rental</button>
+            <button onclick="resetView()" class="btn-text">Cancel</button>
+        </div>
+    </div>
+
+    <script src="/static/script.js"></script>
+</body>
+</html>

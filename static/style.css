@@ -1,6 +1,6 @@
 /* --- Main Theme Colors --- */
 :root {
-    --bg-color-main: #1e1a4a;      /* AAU Dark Blue from image */
+    --bg-color-main: #1e1a4a;      /* AAU Dark Blue */
     --bg-color-container: #2a2a3a; /* Slightly lighter dark blue-grey for the card */
     --text-color-primary: #ffffff; /* White text for contrast */
     --text-color-secondary: #cccccc; /* Light grey for less important text */

@@ -5,7 +5,7 @@ echo "Creating certs directory..."
 mkdir -p certs
 
 echo "Generating SSL Certificates for AAU..."
-# We generate the certs
+# Generate the certs
 openssl req -x509 -newkey rsa:4096 -nodes -out certs/cert.pem -keyout certs/key.pem -days 365 -subj "/C=DK/ST=Nordjylland/L=Aalborg/O=AAU/CN=aau-rental"
 
 echo "Certificates created successfully!"

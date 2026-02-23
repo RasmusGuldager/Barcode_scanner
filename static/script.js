@@ -1,5 +1,7 @@
 let html5QrCode;
 let currentCardId = null;
+let currentScanMode = 'card';
+let rentedItems = [];
 
 // Initialize scanner object
 window.onload = function() {
@@ -7,15 +9,16 @@ window.onload = function() {
 };
 
 function resetView() {
-    // Hide all views, show menu
     document.getElementById('view-menu').classList.remove('hidden');
     document.getElementById('view-scanner').classList.add('hidden');
     document.getElementById('view-manual').classList.add('hidden');
     document.getElementById('view-form').classList.add('hidden');
     
-    // Clear inputs
+    // Clear all data
     document.getElementById('manual-card-id').value = '';
-    document.getElementById('rental-note').value = '';
+    currentCardId = null;
+    rentedItems = [];
+    updateItemsListUI(); // Clears the visual list
 }
 
 function showManualInput() {
@@ -23,13 +26,18 @@ function showManualInput() {
     document.getElementById('view-manual').classList.remove('hidden');
 }
 
-// Scanner logic
-function startScanner() {
+// REUSABLE SCANNER LOGIC
+
+function startScanner(mode) {
+    currentScanMode = mode; // card or item
+
+    // Hide menus and forms, show the camera
     document.getElementById('view-menu').classList.add('hidden');
+    document.getElementById('view-form').classList.add('hidden');
     document.getElementById('view-scanner').classList.remove('hidden');
 
     html5QrCode.start(
-        { facingMode: "environment" }, // Rear camera
+        { facingMode: "environment" },
         { fps: 10, qrbox: { width: 250, height: 250 } },
         onScanSuccess
     ).catch(err => {
@@ -40,19 +48,30 @@ function startScanner() {
 
 function stopScanner() {
     html5QrCode.stop().then(() => {
-        resetView();
+        // If an item scan is cancelled, go back to the form. Otherwise, go to main menu.
+        if (currentScanMode === 'item') {
+            showFormView();
+        } else {
+            resetView();
+        }
     }).catch(err => console.log(err));
 }
 
 function onScanSuccess(decodedText, decodedResult) {
-    // Stop scanning
     html5QrCode.stop().then(() => {
-        // Pass the scanned ID to the shared function
-        handleCard(decodedText);
+        // Decide what to do with the text based on the current mode
+        if (currentScanMode === 'card') {
+            handleCard(decodedText);
+        } else if (currentScanMode === 'item') {
+            addItemToList(decodedText);
+            showFormView(); // Send them back to the form to see their list
+        }
     });
 }
 
-// Manual input logic
+
+// --- CARD LOGIC ---
+
 function handleManualInput() {
     const inputId = document.getElementById('manual-card-id').value;
     if (inputId) {
@@ -62,37 +81,87 @@ function handleManualInput() {
     }
 }
 
-// Shared function to handle card ID
 function handleCard(cardId) {
     currentCardId = cardId;
-    
-    // Switch to the Form View
-    document.getElementById('view-scanner').classList.add('hidden');
-    document.getElementById('view-manual').classList.add('hidden');
-    document.getElementById('view-form').classList.remove('hidden');
-    
-    // Show the ID to the user
     document.getElementById('display-card-id').innerText = cardId;
+    showFormView();
 }
 
-async function submitRental() {
-    const note = document.getElementById('rental-note').value;
+function showFormView() {
+    document.getElementById('view-scanner').classList.add('hidden');
+    document.getElementById('view-manual').classList.add('hidden');
+    document.getElementById('view-menu').classList.add('hidden');
+    document.getElementById('view-form').classList.remove('hidden');
+}
+
+
+// MULTIPLE ITEMS LOGIC
+
+function addManualItem() {
+    const inputField = document.getElementById('manual-item-input');
+    const itemText = inputField.value.trim();
     
-    // Send the card ID and note to the backend
+    if (itemText) {
+        addItemToList(itemText);
+        inputField.value = ''; // Clear the input field after adding
+    }
+}
+
+function addItemToList(itemText) {
+    rentedItems.push(itemText);
+    updateItemsListUI();
+}
+
+function removeItem(index) {
+    rentedItems.splice(index, 1); // Remove 1 item at the specific index
+    updateItemsListUI();
+}
+
+function updateItemsListUI() {
+    const listEl = document.getElementById('items-list');
+    listEl.innerHTML = ''; // Clear the current HTML list
+    
+    // Rebuild the HTML list from our array
+    rentedItems.forEach((item, index) => {
+        const li = document.createElement('li');
+        li.innerText = item + " ";
+        
+        // Add a remove button for each item
+        const removeBtn = document.createElement('span');
+        removeBtn.innerText = '❌';
+        removeBtn.style.cursor = 'pointer';
+        removeBtn.onclick = () => removeItem(index);
+        
+        li.appendChild(removeBtn);
+        listEl.appendChild(li);
+    });
+}
+
+// --- SUBMIT LOGIC ---
+
+async function submitRental() {
+    if (rentedItems.length === 0) {
+        alert("Please add at least one item to the rental list.");
+        return;
+    }
+    
+    // Items are joined into a single comma-separated string
+    const joinedItems = rentedItems.join(', ');
+    
     try {
         const response = await fetch('/api/rent', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ 
                 card_id: currentCardId, 
-                note: note 
+                note: joinedItems 
             })
         });
         
         const data = await response.json();
         
         if (data.status === 'success') {
-            alert("Rental Successful!");
+            alert("Rental Successful!\nItems: " + joinedItems);
             resetView();
         } else {
             alert("Error: " + data.message);

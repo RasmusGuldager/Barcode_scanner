@@ -30,9 +30,24 @@
 
         <div id="view-form" class="hidden">
             <h3>Student: <span id="display-card-id">...</span></h3>
-            <textarea id="rental-note" placeholder="What are you renting? (e.g. Camera Kit 2)"></textarea>
-            <button onclick="submitRental()" class="btn-primary">Confirm Rental</button>
-            <button onclick="resetView()" class="btn-text">Cancel</button>
+            
+            <div style="text-align: left; background: #f8f9fa; color: #000; padding: 10px; border-radius: 5px; margin-bottom: 15px;">
+                <strong>Items to Rent:</strong>
+                <ul id="items-list" style="padding-left: 20px; margin-top: 5px;">
+                    </ul>
+            </div>
+
+            <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+                <input type="text" id="manual-item-input" placeholder="Type item name..." style="margin: 0;">
+                <button onclick="addManualItem()" class="btn-secondary" style="margin: 0; width: 30%;">Add</button>
+            </div>
+            
+            <button onclick="startScanner('item')" class="btn-primary">📷 Scan Item Barcode</button>
+            
+            <hr style="border: 1px solid #444; margin: 20px 0;">
+
+            <button onclick="submitRental()" class="btn-success">Confirm Rental</button>
+            <button onclick="resetView()" class="btn-text">Cancel All</button>
         </div>
     </div>
 

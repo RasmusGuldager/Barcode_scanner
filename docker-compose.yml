@@ -3,7 +3,9 @@ version: '3.8'
 services:
   flask_app:
     build: .
-    restart: always
+    restart: unless-stopped
+    volumes:
+      - ./data:/app/data
 
   nginx:
     image: nginx:alpine
@@ -15,4 +17,4 @@ services:
       - ./certs:/etc/nginx/certs
     depends_on:
       - flask_app
-    restart: always
+    restart: unless-stopped

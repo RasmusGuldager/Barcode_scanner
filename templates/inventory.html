@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>VAP-LAB Inventory</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #1e1a4a; color: white; padding: 20px; text-align: center; }
+        .container { max-width: 800px; margin: 0 auto; background-color: #2a2a3a; padding: 30px; border-radius: 12px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; text-align: left; }
+        th, td { padding: 12px; border-bottom: 1px solid #444; }
+        th { background-color: #1e1a4a; color: #ffc107; }
+        .status-in { color: #28a745; font-weight: bold; }
+        .status-out { color: #dc3545; font-weight: bold; }
+        .btn-secondary { background-color: #6c757d; color: white; padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; text-decoration: none; display: inline-block; margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div style="text-align: left;">
+            <a href="/" class="btn-secondary">Back to Scanner</a>
+        </div>
+
+        <h1>Equipment Inventory</h1>
+        
+        <table>
+            <thead>
+                <tr>
+                    <th>Barcode ID</th>
+                    <th>Equipment Name</th>
+                    <th>Current Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in items %}
+                <tr>
+                    <td>{{ item.barcode }}</td>
+                    <td>{{ item.name }}</td>
+                    <td>
+                        {% if item.is_rented %}
+                            <span class="status-out">🔴 Rented Out</span>
+                        {% else %}
+                            <span class="status-in">🟢 In Storage</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="3" style="text-align: center;">No items registered yet. Scan an item to add it!</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+</body>
+</html>

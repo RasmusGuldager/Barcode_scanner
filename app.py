@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
-import os
+from datetime import datetime
+import os, logging
 
 app = Flask(__name__)
 
@@ -14,20 +15,50 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
 
+# 1. User database
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     card_id = db.Column(db.String(50), unique=True, nullable=False)
     name = db.Column(db.String(100), nullable=True) 
+    
+    # Enables back-referencing to rental transactions for this user
+    rentals = db.relationship('RentalTransaction', backref='user', lazy=True)
 
-
-class Rental(db.Model):
+# 2. Equipment database
+class Item(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    card_id = db.Column(db.String(50), nullable=False)
-    items_rented = db.Column(db.String(200), nullable=False)
+    barcode = db.Column(db.String(50), unique=True, nullable=False)
+    name = db.Column(db.String(100), nullable=False)
+    is_rented = db.Column(db.Boolean, default=False)
+    
+    # Enables back-referencing to rental transactions for this item
+    history = db.relationship('RentalTransaction', backref='item', lazy=True)
+
+# 3. Rental log database
+class RentalTransaction(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    item_id = db.Column(db.Integer, db.ForeignKey('item.id'), nullable=False)
+    
+    # Timestamps
+    rented_at = db.Column(db.DateTime, default=datetime.now)
+    returned_at = db.Column(db.DateTime, nullable=True) # Tom indtil udstyret afleveres!
 
 
 with app.app_context():
     db.create_all()
+
+
+log_file_path = os.path.join(basedir, 'data', 'app.log')
+
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler(log_file_path),
+        logging.StreamHandler()
+    ]
+)
 
 
 # Serve the HTML file
@@ -35,33 +66,95 @@ with app.app_context():
 def home():
     return render_template('index.html')
 
-# The API Endpoint JS calls
-@app.route('/api/rent', methods=['POST'])
+
+@app.route('/inventory')
+def inventory():
+    items = Item.query.all()
+    return render_template('inventory.html', items=items)
+
+
+@app.route('/logs')
+def logs():
+    transactions = RentalTransaction.query.order_by(RentalTransaction.rented_at.desc()).all()
+    return render_template('logs.html', transactions=transactions)
+
+
+# The API Endpoint for handling rentals and returns
+@app.route('/api/transaction', methods=['POST'])
 def rent_equipment():
-    data = request.json
-    card_id = data.get('card_id')
-    note = data.get('note')
-    
-    print(f"Received Rental Request: Card {card_id}, Note: {note}")
+    try:
+        data = request.json
+        card_id = data.get('card_id')
+        note = data.get('note')
+        action = data.get('action') 
+        
+        logging.info(f"Received Rental Request: Card {card_id}, Note: {note}, Action: {action}")
 
-    user = User.query.filter_by(card_id=card_id).first()
+        user = User.query.filter_by(card_id=card_id).first()
 
-    if not user:
-        print(f"No user found with card ID {card_id}. Creating new user.")
-        new_user = User(card_id=card_id, name="Uknown User")
-        db.session.add(new_user)
+        if not user:
+            logging.info(f"Card ID {card_id} not found in database. Creating new user entry.")
+            new_user = User(card_id=card_id, name="Unknown User")
+            db.session.add(new_user)
+            db.session.commit()
+
+        barcodes = [b.strip() for b in note.split(',') if b.strip()]
+        
+        # add items to rental log
+        for barcode in barcodes:
+            item = Item.query.filter_by(barcode=barcode).first()
+
+            if not item:
+                logging.warning(f"Item with barcode {barcode} not found.")
+                return jsonify({
+                    "status": "error",
+                    "message": f"Item with barcode {barcode} not found."
+                }), 404
+            
+            if action == 'rent':
+                item.is_rented = True
+                
+                new_transaction = RentalTransaction(
+                    user_id=user.id,
+                    item_id=item.id,
+                    rented_at=datetime.now()
+                )
+                db.session.add(new_transaction)
+
+            elif action == 'return':
+                item.is_rented = False
+                
+                open_transaction = RentalTransaction.query.filter_by(
+                    user_id=user.id, 
+                    item_id=item.id, 
+                    returned_at=None
+                ).first()
+                
+                if open_transaction:
+                    open_transaction.returned_at = datetime.now()
+                else:
+                    logging.warning(f"No open rental transaction found for user {user.card_id} and item {item.barcode}.")
+                    return jsonify({
+                        "status": "error",
+                        "message": f"No open rental transaction found for user {user.card_id} and item {item.barcode}."
+                    }), 404
+
         db.session.commit()
+
+        return jsonify({
+            "status": "success",
+            "message": "Transaction logged successfully"
+        })
     
-    # add items to rental log
-    new_rental = Rental(card_id=card_id, items_rented=note)
-    db.session.add(new_rental)
-    db.session.commit()
-    
-    # Simulate a success
-    return jsonify({
-        "status": "success",
-        "message": "Rental logged successfully"
-    })
+    except Exception as e:
+        logging.error(f"Error processing transaction: {str(e)}")
+        return jsonify({
+            "status": "error",
+            "message": f"From python: {str(e)}"
+        }), 500
+
+
+
 
 if __name__ == '__main__':
     # Only for debug

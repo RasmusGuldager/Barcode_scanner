@@ -10,11 +10,24 @@
 <body>
 
     <div class="container">
-        <h1>VAP-LAB Equipment Rental</h1>
+        <h1 style="text-align: center; color: white; margin-bottom: 20px;">VAP-LAB Equipment Rental</h1>
 
-        <div id="view-menu">
-            <button onclick="startScanner('card')" class="btn-primary">📷 Scan AAU Card</button>
-            <button onclick="showManualInput()" class="btn-secondary">⌨️ Type AAU Card Number</button>
+        <div id="view-menu" class="card">
+            
+            <div class="menu-section">
+                <h2>Rent or Return Items</h2>
+                <button onclick="startScanner('card')" class="btn-primary">📷 Scan AAU Card</button>
+                <button onclick="showManualInput()" class="btn-secondary">Type AAU Card Number</button>
+            </div>
+
+            <hr style="border: 1px solid #444; margin: 25px 0;">
+
+            <div class="menu-section">
+                <h2>Database</h2>
+                <button onclick="window.location.href='/inventory'" class="btn-secondary">View Inventory</button>
+                <button onclick="window.location.href='/logs'" class="btn-secondary">View Rental Logs</button>
+            </div>
+
         </div>
 
         <div id="view-scanner" class="hidden">
@@ -28,8 +41,18 @@
             <button onclick="resetView()" class="btn-text">Back</button>
         </div>
 
+        <div id="view-action" class="hidden">
+            <h3>CardNo: <span id="display-action-card-id">...</span></h3>
+            <h2 style="margin: 20px 0;">What would you like to do?</h2>
+            
+            <button onclick="selectAction('rent')" class="btn-success" style="padding: 20px; font-size: 20px;">Rent Items</button>
+            <button onclick="selectAction('return')" class="btn-primary" style="padding: 20px; font-size: 20px;">Return Items</button>
+            
+            <button onclick="resetView()" class="btn-text" style="margin-top: 20px;">Cancel</button>
+        </div>
+
         <div id="view-form" class="hidden">
-            <h3>Student: <span id="display-card-id">...</span></h3>
+            <h3>CardNo: <span id="display-card-id">...</span></h3>
             
             <div style="text-align: left; background: #f8f9fa; color: #000; padding: 10px; border-radius: 5px; margin-bottom: 15px;">
                 <strong>Items to Rent:</strong>
@@ -46,7 +69,7 @@
             
             <hr style="border: 1px solid #444; margin: 20px 0;">
 
-            <button onclick="submitRental()" class="btn-success">Confirm Rental</button>
+            <button id="btn_submit" onclick="submitTransaction()" class="btn-success">Confirm</button>
             <button onclick="resetView()" class="btn-text">Cancel All</button>
         </div>
     </div>

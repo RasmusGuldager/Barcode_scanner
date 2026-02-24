@@ -1,10 +1,12 @@
 let html5QrCode;
 let currentCardId = null;
-let currentScanMode = 'card';
+let currentScanMode = 'card'; // Can be either 'card' or 'item'
+let currentAction = null; // Can be 'rent' or 'return'
 let rentedItems = [];
 
+
 // Initialize scanner object
-window.onload = function() {
+window.onload = function () {
     html5QrCode = new Html5Qrcode("reader");
 };
 
@@ -12,11 +14,13 @@ function resetView() {
     document.getElementById('view-menu').classList.remove('hidden');
     document.getElementById('view-scanner').classList.add('hidden');
     document.getElementById('view-manual').classList.add('hidden');
+    document.getElementById('view-action').classList.add('hidden');
     document.getElementById('view-form').classList.add('hidden');
-    
+
     // Clear all data
     document.getElementById('manual-card-id').value = '';
     currentCardId = null;
+    currentAction = null;
     rentedItems = [];
     updateItemsListUI(); // Clears the visual list
 }
@@ -74,17 +78,22 @@ function onScanSuccess(decodedText, decodedResult) {
 
 function handleManualInput() {
     const inputId = document.getElementById('manual-card-id').value;
-    if (inputId) {
+    if (inputId && inputId.length == 6 && /^\d+$/.test(inputId)) {
         handleCard(inputId);
     } else {
-        alert("Please enter a card number");
+        alert("Please enter a valid 6-digit card number");
     }
 }
 
 function handleCard(cardId) {
     currentCardId = cardId;
+
+    document.getElementById('display-action-card-id').innerText = cardId;
     document.getElementById('display-card-id').innerText = cardId;
-    showFormView();
+
+    document.getElementById('view-scanner').classList.add('hidden');
+    document.getElementById('view-manual').classList.add('hidden');
+    document.getElementById('view-action').classList.remove('hidden');
 }
 
 function showFormView() {
@@ -95,12 +104,29 @@ function showFormView() {
 }
 
 
+function selectAction(action) {
+    currentAction = action;
+
+    const submitBtn = document.getElementById('btn_submit');
+    if (action === 'rent') {
+        submitBtn.innerText = 'Confirm Rental';
+        submitBtn.className = 'btn-success';
+    } else {
+        submitBtn.innerText = 'Confirm Return';
+        submitBtn.className = 'btn-sucess';
+    }
+
+    document.getElementById('view-action').classList.add('hidden');
+    showFormView();
+}
+
+
 // MULTIPLE ITEMS LOGIC
 
 function addManualItem() {
     const inputField = document.getElementById('manual-item-input');
     const itemText = inputField.value.trim();
-    
+
     if (itemText) {
         addItemToList(itemText);
         inputField.value = ''; // Clear the input field after adding
@@ -120,18 +146,18 @@ function removeItem(index) {
 function updateItemsListUI() {
     const listEl = document.getElementById('items-list');
     listEl.innerHTML = ''; // Clear the current HTML list
-    
+
     // Rebuild the HTML list from our array
     rentedItems.forEach((item, index) => {
         const li = document.createElement('li');
         li.innerText = item + " ";
-        
+
         // Add a remove button for each item
         const removeBtn = document.createElement('span');
         removeBtn.innerText = '❌';
         removeBtn.style.cursor = 'pointer';
         removeBtn.onclick = () => removeItem(index);
-        
+
         li.appendChild(removeBtn);
         listEl.appendChild(li);
     });
@@ -139,30 +165,32 @@ function updateItemsListUI() {
 
 // --- SUBMIT LOGIC ---
 
-async function submitRental() {
+async function submitTransaction() {
     if (rentedItems.length === 0) {
-        alert("Please add at least one item to the rental list.");
+        alert("Please add at least one item.");
         return;
     }
-    
+
     // Items are joined into a single comma-separated string
     const joinedItems = rentedItems.join(', ');
-    
+
     try {
-        const response = await fetch('/api/rent', {
+        const response = await fetch('/api/transaction', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-                card_id: currentCardId, 
-                note: joinedItems 
+            body: JSON.stringify({
+                card_id: currentCardId,
+                note: joinedItems,
+                action: currentAction // Send rent or return
             })
         });
-        
+
         const data = await response.json();
-        
+
         if (data.status === 'success') {
-            alert("Rental Successful!\nItems: " + joinedItems);
+            alert((currentAction === 'rent' ? "Rental" : "Return") + " Successful!\nItems: " + joinedItems);
             resetView();
+            
         } else {
             alert("Error: " + data.message);
         }

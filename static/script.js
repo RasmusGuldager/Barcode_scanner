@@ -113,7 +113,7 @@ function selectAction(action) {
         submitBtn.className = 'btn-success';
     } else {
         submitBtn.innerText = 'Confirm Return';
-        submitBtn.className = 'btn-sucess';
+        submitBtn.className = 'btn-success';
     }
 
     document.getElementById('view-action').classList.add('hidden');

@@ -27,22 +27,43 @@ def main():
             break
         if not barcode:
             continue
-            
+        
+        
         # 2. Spørg efter navnet
         name = input(f"Hvad hedder udstyret ({barcode})?: ").strip()
         if name.lower() == 'exit':
             break
 
-        # 3. Prøv at gemme det i databasen
-        try:
-            # is_rented sættes til 0 (som betyder False / "In Storage")
-            cursor.execute('''
-                INSERT INTO item (barcode, name, is_rented) 
-                VALUES (?, ?, 0)
-            ''', (barcode, name))
+        category = input(f"Hvilken kategori passer bedst til '{name}'?").strip()
+        if category.lower() == 'exit':
+            break
             
-            conn.commit() # Gem ændringen fysisk i filen
-            print(f"✅ Succes! '{name}' er nu tilføjet til lageret.\n")
+        # 3. Spørg efter ekstra info (Multiline)
+        print("Ekstra info (Skriv alt hvad du vil. Tryk ENTER to gange i træk for at afslutte):")
+        info_lines = []
+        while True:
+            line = input()
+            # Hvis brugeren trykker Enter uden at skrive noget, stopper vi
+            if line == "": 
+                break
+            info_lines.append(line)
+            
+        # Saml alle linjerne til én lang tekst med rigtige linjeskift (\n)
+        extra_info = "\n".join(info_lines)
+        
+        # Hvis de bare trykkede enter med det samme, sætter vi den til None
+        if not extra_info.strip():
+            extra_info = None
+
+        # 4. Prøv at gemme det i databasen (Husk at opdatere SQL-strengen)
+        try:
+            cursor.execute('''
+                INSERT INTO item (barcode, name, category, extra_info, is_rented) 
+                VALUES (?, ?, ?, ?, 0)
+            ''', (barcode, name, category, extra_info))
+            
+            conn.commit()
+            print(f"✅ Succes! '{name}' er nu tilføjet.\n")
             
         except sqlite3.IntegrityError:
             # SQLAlchemy har sat 'unique=True' på stregkoden. 

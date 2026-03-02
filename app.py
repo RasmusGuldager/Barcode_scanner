@@ -30,10 +30,23 @@ class Item(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     barcode = db.Column(db.String(50), unique=True, nullable=False)
     name = db.Column(db.String(100), nullable=False)
+    extra_info = db.Column(db.Text, nullable=True)
     is_rented = db.Column(db.Boolean, default=False)
+    category = db.Column(db.String(50), nullable=True)
     
     # Enables back-referencing to rental transactions for this item
     history = db.relationship('RentalTransaction', backref='item', lazy=True)
+
+    @property
+    def current_renter_email(self):
+        if not self.is_rented:
+            return None
+        # Kig i historikken for at finde det udlån, der ikke er afleveret endnu
+        for transaction in self.history:
+            if transaction.returned_at is None:
+                # Retur emailen på den bruger, der sidder med udstyret
+                return transaction.user.email
+        return "Unknown"
 
 # 3. Rental log database
 class RentalTransaction(db.Model):
@@ -60,7 +73,6 @@ logging.basicConfig(
         logging.StreamHandler()
     ]
 )
-
 
 # Serve the HTML file
 @app.route('/')

@@ -28,6 +28,8 @@
                 <tr>
                     <th>Barcode ID</th>
                     <th>Equipment Name</th>
+                    <th>Category</th>
+                    <th>Extra Info</th>
                     <th>Current Status</th>
                 </tr>
             </thead>
@@ -36,17 +38,19 @@
                 <tr>
                     <td>{{ item.barcode }}</td>
                     <td>{{ item.name }}</td>
+                    <td>{{ item.category or '-' }}</td>
+                    <td style="white-space: pre-wrap;">{{ item.extra_info or '' }}</td>
                     <td>
                         {% if item.is_rented %}
-                            <span class="status-out">🔴 Rented Out</span>
+                            <span class="status-out">{{ item.current_renter_email }}</span>
                         {% else %}
-                            <span class="status-in">🟢 In Storage</span>
+                            <span class="status-in">In Storage</span>
                         {% endif %}
                     </td>
                 </tr>
                 {% else %}
                 <tr>
-                    <td colspan="3" style="text-align: center;">No items registered yet. Scan an item to add it!</td>
+                    <td colspan="5" style="text-align: center;">No items registered yet. Scan an item to add it!</td>
                 </tr>
                 {% endfor %}
             </tbody>

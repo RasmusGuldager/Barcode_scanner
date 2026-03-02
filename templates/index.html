@@ -17,7 +17,7 @@
             <div class="menu-section">
                 <h2>Rent or Return Items</h2>
                 <button onclick="startScanner('card')" class="btn-primary">📷 Scan AAU Card</button>
-                <button onclick="showManualInput()" class="btn-secondary">Type AAU Card Number</button>
+                <button onclick="showManualInput()" class="btn-secondary">Type e-mail (Non-AAU)</button>
             </div>
 
             <hr style="border: 1px solid #444; margin: 25px 0;">
@@ -36,13 +36,24 @@
         </div>
 
         <div id="view-manual" class="hidden">
-            <input type="text" id="manual-card-id" placeholder="Enter Card ID (e.g. 123456)">
+            <input type="text" id="email-input" placeholder="Enter e-mail (e.g. example@student.aau.dk)">
             <button onclick="handleManualInput()" class="btn-success">Next</button>
             <button onclick="resetView()" class="btn-text">Back</button>
         </div>
 
+        <div id="view-register" class="hidden">
+            <h2 style="margin: 20px 0;">New User Registration</h2>
+            <p style="margin-bottom: 20px;">Please register to continue.</p>
+            
+            <input type="text" id="reg-name" placeholder="Full Name">
+            <input type="email" id="reg-email" placeholder="E-mail Address">
+            
+            <button onclick="completeRegistration()" class="btn-success">Save & Continue</button>
+            <button onclick="resetView()" class="btn-text">Cancel</button>
+        </div>
+
         <div id="view-action" class="hidden">
-            <h3>CardNo: <span id="display-action-card-id">...</span></h3>
+            <h3>Mail: <span id="display-action-mail">...</span></h3>
             <h2 style="margin: 20px 0;">What would you like to do?</h2>
             
             <button onclick="selectAction('rent')" class="btn-success" style="padding: 20px; font-size: 20px;">Rent Items</button>
@@ -52,7 +63,7 @@
         </div>
 
         <div id="view-form" class="hidden">
-            <h3>CardNo: <span id="display-card-id">...</span></h3>
+            <h3>Mail: <span id="display-mail">...</span></h3>
             
             <div style="text-align: left; background: #f8f9fa; color: #000; padding: 10px; border-radius: 5px; margin-bottom: 15px;">
                 <strong>Items to Rent:</strong>

@@ -1,5 +1,7 @@
 let html5QrCode;
 let currentCardId = null;
+let currentEmail = null;
+let currentName = null;
 let currentScanMode = 'card'; // Can be either 'card' or 'item'
 let currentAction = null; // Can be 'rent' or 'return'
 let rentedItems = [];
@@ -14,15 +16,20 @@ function resetView() {
     document.getElementById('view-menu').classList.remove('hidden');
     document.getElementById('view-scanner').classList.add('hidden');
     document.getElementById('view-manual').classList.add('hidden');
+    document.getElementById('view-register').classList.add('hidden'); // Skjul den nye skærm
     document.getElementById('view-action').classList.add('hidden');
     document.getElementById('view-form').classList.add('hidden');
 
-    // Clear all data
-    document.getElementById('manual-card-id').value = '';
+    document.getElementById('email-input').value = '';
+    document.getElementById('reg-name').value = '';
+    document.getElementById('reg-email').value = '';
+
     currentCardId = null;
+    currentEmail = null;
+    currentName = null;
     currentAction = null;
     rentedItems = [];
-    updateItemsListUI(); // Clears the visual list
+    updateItemsListUI();
 }
 
 function showManualInput() {
@@ -65,7 +72,7 @@ function onScanSuccess(decodedText, decodedResult) {
     html5QrCode.stop().then(() => {
         // Decide what to do with the text based on the current mode
         if (currentScanMode === 'card') {
-            handleCard(decodedText);
+            handleCard(decodedText, null);
         } else if (currentScanMode === 'item') {
             addItemToList(decodedText);
             showFormView(); // Send them back to the form to see their list
@@ -77,24 +84,72 @@ function onScanSuccess(decodedText, decodedResult) {
 // --- CARD LOGIC ---
 
 function handleManualInput() {
-    const inputId = document.getElementById('manual-card-id').value;
-    if (inputId && inputId.length == 6 && /^\d+$/.test(inputId)) {
-        handleCard(inputId);
+    const inputEmail = document.getElementById('email-input').value;
+    if (inputEmail && inputEmail.includes('@') && inputEmail.includes('.')) {
+        handleCard(null, inputEmail);
     } else {
-        alert("Please enter a valid 6-digit card number");
+        alert("Please enter a valid e-mail address");
     }
 }
 
-function handleCard(cardId) {
+async function handleCard(cardId = null, email = null) {
     currentCardId = cardId;
+    currentEmail = email;
 
-    document.getElementById('display-action-card-id').innerText = cardId;
-    document.getElementById('display-card-id').innerText = cardId;
-
+    document.getElementById('view-menu').classList.add('hidden');
     document.getElementById('view-scanner').classList.add('hidden');
     document.getElementById('view-manual').classList.add('hidden');
+
+    try {
+        const response = await fetch('/api/check_user', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ card_id: cardId, email: email })
+        });
+        const data = await response.json();
+
+        if (data.exists) {
+            currentEmail = data.email;
+            currentName = data.name;
+            showActionView();
+        } else {
+            document.getElementById('view-register').classList.remove('hidden');
+            if (email) {
+                document.getElementById('reg-email').value = email;
+            }
+        }
+    } catch (error) {
+        alert("Error checking user database: " + error);
+        resetView();
+    }
+}
+
+
+function completeRegistration() {
+    const nameInput = document.getElementById('reg-name').value.trim();
+    const emailInput = document.getElementById('reg-email').value.trim();
+
+    if (!nameInput || !emailInput) {
+        alert("Please provide both Name and Email.");
+        return;
+    }
+
+    currentName = nameInput;
+    currentEmail = emailInput;
+
+    document.getElementById('view-register').classList.add('hidden');
+    showActionView();
+}
+
+
+function showActionView() {
+    const displayEmail = currentEmail;
+    document.getElementById('display-action-mail').innerText = displayEmail;
+    document.getElementById('display-mail').innerText = displayEmail;
+    
     document.getElementById('view-action').classList.remove('hidden');
 }
+
 
 function showFormView() {
     document.getElementById('view-scanner').classList.add('hidden');
@@ -180,6 +235,8 @@ async function submitTransaction() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 card_id: currentCardId,
+                email: currentEmail,
+                name: currentName,
                 note: joinedItems,
                 action: currentAction // Send rent or return
             })
@@ -190,7 +247,7 @@ async function submitTransaction() {
         if (data.status === 'success') {
             alert((currentAction === 'rent' ? "Rental" : "Return") + " Successful!\nItems: " + joinedItems);
             resetView();
-            
+
         } else {
             alert("Error: " + data.message);
         }

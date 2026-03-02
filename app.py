@@ -18,7 +18,8 @@ db = SQLAlchemy(app)
 # 1. User database
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    card_id = db.Column(db.String(50), unique=True, nullable=False)
+    card_id = db.Column(db.String(50), unique=True, nullable=True)
+    email = db.Column(db.String(100), unique=True, nullable=True)
     name = db.Column(db.String(100), nullable=True) 
     
     # Enables back-referencing to rental transactions for this user
@@ -79,24 +80,49 @@ def logs():
     return render_template('logs.html', transactions=transactions)
 
 
+@app.route('/api/check_user', methods=['POST'])
+def check_user():
+    data = request.json
+    card_id = data.get('card_id')
+    email = data.get('email')
+
+    user = None
+    if card_id:
+        user = User.query.filter_by(card_id=card_id).first()
+    elif email:
+        user = User.query.filter_by(email=email).first()
+
+    if user:
+        return jsonify({"exists": True, "name": user.name, "email": user.email})
+    else:
+        return jsonify({"exists": False})
+
+
 # The API Endpoint for handling rentals and returns
 @app.route('/api/transaction', methods=['POST'])
 def rent_equipment():
     try:
         data = request.json
         card_id = data.get('card_id')
+        currentEmail = data.get('email')
+        currentName = data.get('name', "Unknown User")
         note = data.get('note')
         action = data.get('action') 
         
         logging.info(f"Received Rental Request: Card {card_id}, Note: {note}, Action: {action}")
 
-        user = User.query.filter_by(card_id=card_id).first()
+        if card_id:
+            user = User.query.filter_by(card_id=card_id).first()
+        elif currentEmail:
+            user = User.query.filter_by(email=currentEmail).first()
 
         if not user:
             logging.info(f"Card ID {card_id} not found in database. Creating new user entry.")
-            new_user = User(card_id=card_id, name="Unknown User")
+            new_user = User(card_id=card_id, email=currentEmail, name=currentName)
             db.session.add(new_user)
             db.session.commit()
+
+            user = new_user
 
         barcodes = [b.strip() for b in note.split(',') if b.strip()]
         

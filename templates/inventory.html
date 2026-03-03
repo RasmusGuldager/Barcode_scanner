@@ -5,13 +5,44 @@
     <title>VAP-LAB Inventory</title>
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #1e1a4a; color: white; padding: 20px; text-align: center; }
-        .container { max-width: 800px; margin: 0 auto; background-color: #2a2a3a; padding: 30px; border-radius: 12px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; text-align: left; }
-        th, td { padding: 12px; border-bottom: 1px solid #444; }
+        
+        /* Vi gør containeren bredere, så der er plads til både menu og tabel */
+        .container { max-width: 1300px; margin: 0 auto; background-color: #2a2a3a; padding: 30px; border-radius: 12px; }
+        
+        /* Flexbox-magien der sætter tingene side om side */
+        .layout-wrapper { display: flex; gap: 30px; align-items: flex-start; flex-wrap: wrap; text-align: left; }
+        
+        /* Formular design (Ligger nu til venstre) */
+        .form-section { 
+            flex: 1; /* Tager 1 del af pladsen */
+            min-width: 320px; 
+            background-color: #3b3b4f; 
+            padding: 20px; 
+            border-radius: 8px; 
+            border-left: 5px solid #ffc107;
+            position: sticky; /* Bliver på skærmen når man scroller ned */
+            top: 20px;
+        }
+        input, textarea { width: 100%; padding: 10px; margin: 8px 0 15px 0; box-sizing: border-box; border: 2px solid #444; border-radius: 6px; font-size: 15px; }
+        input:focus, textarea:focus { outline: none; border-color: #ffc107; }
+        textarea { resize: vertical; height: 100px; }
+        .btn-success { background-color: #28a745; color: white; border: none; padding: 12px; border-radius: 6px; font-size: 16px; cursor: pointer; font-weight: bold; width: 100%; }
+        
+        /* Tabel design (Ligger nu til højre) */
+        .table-section {
+            flex: 2; /* Tager 2 dele af pladsen (er dobbelt så bred) */
+            min-width: 500px;
+            overflow-x: auto;
+        }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; text-align: left; font-size: 14px; }
+        th, td { padding: 10px; border-bottom: 1px solid #444; }
         th { background-color: #1e1a4a; color: #ffc107; }
         .status-in { color: #28a745; font-weight: bold; }
         .status-out { color: #dc3545; font-weight: bold; }
+        
+        /* Knapper */
         .btn-secondary { background-color: #6c757d; color: white; padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; text-decoration: none; display: inline-block; margin-bottom: 20px; }
+        .btn-edit { background-color: #ffc107; color: #000; padding: 6px 12px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -21,41 +52,138 @@
             <a href="/" class="btn-secondary">Back to Scanner</a>
         </div>
 
-        <h1>Equipment Inventory</h1>
+        <h1 style="text-align: left;">Equipment Inventory</h1>
         
-        <table>
-            <thead>
-                <tr>
-                    <th>Barcode ID</th>
-                    <th>Equipment Name</th>
-                    <th>Category</th>
-                    <th>Extra Info</th>
-                    <th>Current Status</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for item in items %}
-                <tr>
-                    <td>{{ item.barcode }}</td>
-                    <td>{{ item.name }}</td>
-                    <td>{{ item.category or '-' }}</td>
-                    <td style="white-space: pre-wrap;">{{ item.extra_info or '' }}</td>
-                    <td>
-                        {% if item.is_rented %}
-                            <span class="status-out">{{ item.current_renter_email }}</span>
-                        {% else %}
-                            <span class="status-in">In Storage</span>
-                        {% endif %}
-                    </td>
-                </tr>
-                {% else %}
-                <tr>
-                    <td colspan="5" style="text-align: center;">No items registered yet. Scan an item to add it!</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
+        <div class="layout-wrapper">
+            
+            <div class="form-section" id="form-container">
+                <h3 style="margin-top: 0;" id="form-title">Add New Equipment</h3>
+                <form id="item-form">
+                    <label><strong>Barcode (ID) *</strong></label>
+                    <input type="text" id="item-barcode" placeholder="e.g. A2A3536-31UCBAS_1" required>
 
+                    <label><strong>Equipment Name *</strong></label>
+                    <input type="text" id="item-name" placeholder="e.g. Basler RGB Camera" required>
+
+                    <label><strong>Category</strong></label>
+                    <input type="text" id="item-category" placeholder="e.g. Camera">
+
+                    <label><strong>Extra Information</strong></label>
+                    <textarea id="item-extra" placeholder=""></textarea>
+
+                    <div style="display: flex; gap: 10px;">
+                        <button type="submit" class="btn-success" id="btn-save">Save Item</button>
+                        <button type="button" class="btn-secondary" style="margin: 0; display: none;" id="btn-cancel" onclick="resetForm()">Cancel</button>
+                    </div>
+                </form>
+            </div>
+
+            <div class="table-section">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Barcode</th>
+                            <th>Name</th>
+                            <th>Category</th>
+                            <th>Extra Info</th>
+                            <th>Status</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in items %}
+                        <tr>
+                            <td>{{ item.barcode }}</td>
+                            <td>{{ item.name }}</td>
+                            <td>{{ item.category or '-' }}</td>
+                            <td style="white-space: pre-wrap;">{{ item.extra_info or '-' }}</td>
+                            <td>
+                                {% if item.is_rented %}
+                                    <span class="status-out">{{ item.current_renter_email }}</span>
+                                {% else %}
+                                    <span class="status-in">In Storage</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <button class="btn-edit" 
+                                        data-barcode="{{ item.barcode }}"
+                                        data-name="{{ item.name }}"
+                                        data-category="{{ item.category or '' }}"
+                                        data-extra="{{ item.extra_info or '' }}"
+                                        onclick="editItem(this)">
+                                    Edit
+                                </button>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="6" style="text-align: center;">No items registered yet.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+        </div> </div>
+
+    <script>
+        document.getElementById('item-form').addEventListener('submit', async function(e) {
+            e.preventDefault(); 
+
+            const data = {
+                barcode: document.getElementById('item-barcode').value,
+                name: document.getElementById('item-name').value,
+                category: document.getElementById('item-category').value,
+                extra_info: document.getElementById('item-extra').value
+            };
+
+            try {
+                const response = await fetch('/api/save_item', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                const result = await response.json();
+
+                if (result.status === 'success') {
+                    window.location.reload();
+                } else {
+                    alert("Error: " + result.message);
+                }
+            } catch (error) {
+                alert("Connection error: " + error);
+            }
+        });
+
+        // Modtager nu selve knappen som argument ("this" fra HTML'en)
+        function editItem(button) {
+            // Læser data fra knappens data-attributter
+            document.getElementById('item-barcode').value = button.getAttribute('data-barcode');
+            document.getElementById('item-barcode').readOnly = true; 
+            document.getElementById('item-barcode').style.backgroundColor = '#555';
+
+            document.getElementById('item-name').value = button.getAttribute('data-name');
+            document.getElementById('item-category').value = button.getAttribute('data-category');
+            document.getElementById('item-extra').value = button.getAttribute('data-extra');
+
+            document.getElementById('form-title').innerText = "Edit Equipment";
+            document.getElementById('btn-save').innerText = "Update Item";
+            document.getElementById('btn-cancel').style.display = 'block';
+            
+            // Scroller til toppen, hvis man har trykket edit langt nede på siden
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function resetForm() {
+            document.getElementById('item-form').reset();
+            
+            document.getElementById('item-barcode').readOnly = false;
+            document.getElementById('item-barcode').style.backgroundColor = '';
+
+            document.getElementById('form-title').innerText = "Add New Equipment";
+            document.getElementById('btn-save').innerText = "Save Item";
+            document.getElementById('btn-cancel').style.display = 'none';
+        }
+    </script>
 </body>
 </html>

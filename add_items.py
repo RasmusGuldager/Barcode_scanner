@@ -1,6 +1,10 @@
 import sqlite3
 import os
 
+
+# Ren AI kode til at tilføje nye items til databasen via terminalen
+
+
 # Stien til databasen (peger ned i din data-mappe)
 db_path = os.path.join('data', 'database.db')
 

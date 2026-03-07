@@ -29,7 +29,6 @@ class User(db.Model):
 class Item(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     barcode = db.Column(db.String(50), unique=True, nullable=False)
-    name = db.Column(db.String(100), nullable=False)
     category = db.Column(db.String(50), nullable=True)
     extra_info = db.Column(db.Text, nullable=True)
     is_rented = db.Column(db.Boolean, default=False)
@@ -92,35 +91,28 @@ def logs():
     return render_template('logs.html', transactions=transactions)
 
 
-@app.route('/manage_inventory')
-def manage_inventory():
-    return render_template('manage_inventory.html')
-
-
 @app.route('/api/save_item', methods=['POST'])
 def save_item():
     try:
         data = request.json
         barcode = data.get('barcode', '').strip()
-        name = data.get('name', '').strip()
         category = data.get('category', '').strip()
         extra_info = data.get('extra_info', '').strip()
 
-        if not barcode or not name:
-            return jsonify({"status": "error", "message": "Barcode and Name are required!"}), 400
+        if not barcode:
+            return jsonify({"status": "error", "message": "Barcode is required!"}), 400
 
         # Tjek om udstyret allerede findes
         item = Item.query.filter_by(barcode=barcode).first()
 
         if item:
             # Opdater eksisterende
-            item.name = name
             item.category = category
             item.extra_info = extra_info
             action_msg = "updated"
         else:
             # Opret nyt
-            item = Item(barcode=barcode, name=name, category=category, extra_info=extra_info)
+            item = Item(barcode=barcode, category=category, extra_info=extra_info)
             db.session.add(item)
             action_msg = "added"
 

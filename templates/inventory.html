@@ -62,9 +62,6 @@
                     <label><strong>Barcode (ID) *</strong></label>
                     <input type="text" id="item-barcode" placeholder="e.g. A2A3536-31UCBAS_1" required>
 
-                    <label><strong>Equipment Name *</strong></label>
-                    <input type="text" id="item-name" placeholder="e.g. Basler RGB Camera" required>
-
                     <label><strong>Category</strong></label>
                     <input type="text" id="item-category" placeholder="e.g. Camera">
 
@@ -83,7 +80,6 @@
                     <thead>
                         <tr>
                             <th>Barcode</th>
-                            <th>Name</th>
                             <th>Category</th>
                             <th>Extra Info</th>
                             <th>Status</th>
@@ -94,7 +90,6 @@
                         {% for item in items %}
                         <tr>
                             <td>{{ item.barcode }}</td>
-                            <td>{{ item.name }}</td>
                             <td>{{ item.category or '-' }}</td>
                             <td style="white-space: pre-wrap;">{{ item.extra_info or '-' }}</td>
                             <td>
@@ -107,7 +102,6 @@
                             <td>
                                 <button class="btn-edit" 
                                         data-barcode="{{ item.barcode }}"
-                                        data-name="{{ item.name }}"
                                         data-category="{{ item.category or '' }}"
                                         data-extra="{{ item.extra_info or '' }}"
                                         onclick="editItem(this)">
@@ -132,7 +126,6 @@
 
             const data = {
                 barcode: document.getElementById('item-barcode').value,
-                name: document.getElementById('item-name').value,
                 category: document.getElementById('item-category').value,
                 extra_info: document.getElementById('item-extra').value
             };
@@ -162,7 +155,6 @@
             document.getElementById('item-barcode').readOnly = true; 
             document.getElementById('item-barcode').style.backgroundColor = '#555';
 
-            document.getElementById('item-name').value = button.getAttribute('data-name');
             document.getElementById('item-category').value = button.getAttribute('data-category');
             document.getElementById('item-extra').value = button.getAttribute('data-extra');
 

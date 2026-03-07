@@ -1,51 +1,94 @@
 let html5QrCode;
-let currentCardId = null;
-let currentEmail = null;
-let currentName = null;
-let currentScanMode = 'card'; // Can be either 'card' or 'item'
-let currentAction = null; // Can be 'rent' or 'return'
-let rentedItems = [];
 
+const state = {
+    cardId: null,
+    email: null,
+    name: null,
+    scanMode: 'card', // 'card' or 'item'
+    action: null,     // 'rent' or 'return'
+    rentedItems: []
+};
 
-// Initialize scanner object
 window.onload = function () {
     html5QrCode = new Html5Qrcode("reader");
 };
 
+
+const $ = (id) => document.getElementById(id);
+
+// Helper function to show/hide views based on their IDs
+function showView(viewIdToShow) {
+    const allViews = ['view-menu', 'view-scanner', 'view-manual', 'view-register', 'view-action', 'view-form'];
+
+    // Hide all
+    allViews.forEach(id => {
+        $(id).classList.add('hidden');
+    });
+
+    // Show the requested view
+    if (viewIdToShow) {
+        $(viewIdToShow).classList.remove('hidden');
+    }
+}
+
+
+
 function resetView() {
-    document.getElementById('view-menu').classList.remove('hidden');
-    document.getElementById('view-scanner').classList.add('hidden');
-    document.getElementById('view-manual').classList.add('hidden');
-    document.getElementById('view-register').classList.add('hidden'); // Skjul den nye skærm
-    document.getElementById('view-action').classList.add('hidden');
-    document.getElementById('view-form').classList.add('hidden');
+    showView('view-menu');
 
-    document.getElementById('email-input').value = '';
-    document.getElementById('reg-name').value = '';
-    document.getElementById('reg-email').value = '';
+    // reset form fields
+    $('email-input').value = '';
+    $('reg-name').value = '';
+    $('reg-email').value = '';
 
-    currentCardId = null;
-    currentEmail = null;
-    currentName = null;
-    currentAction = null;
-    rentedItems = [];
+    // reset states
+    state.cardId = null;
+    state.email = null;
+    state.name = null;
+    state.action = null;
+    state.rentedItems = [];
+
     updateItemsListUI();
 }
 
 function showManualInput() {
-    document.getElementById('view-menu').classList.add('hidden');
-    document.getElementById('view-manual').classList.remove('hidden');
+    showView('view-manual');
 }
 
-// REUSABLE SCANNER LOGIC
+
+function showActionView() {
+    // Opdaterer teksten på skærmen med den aktuelle email
+    $('display-action-mail').innerText = state.email;
+    $('display-mail').innerText = state.email;
+
+    showView('view-action');
+}
+
+
+function selectAction(action) {
+    state.action = action;
+
+    const submitBtn = $('btn_submit');
+    if (action === 'rent') {
+        submitBtn.innerText = 'Confirm Rental';
+        submitBtn.className = 'btn-success';
+    } else {
+        submitBtn.innerText = 'Confirm Return';
+        submitBtn.className = 'btn-success';
+    }
+
+    showView('view-form');
+}
+
+
+
+
+// SCANNER LOGIC
 
 function startScanner(mode) {
-    currentScanMode = mode; // card or item
+    state.scanMode = mode;
 
-    // Hide menus and forms, show the camera
-    document.getElementById('view-menu').classList.add('hidden');
-    document.getElementById('view-form').classList.add('hidden');
-    document.getElementById('view-scanner').classList.remove('hidden');
+    showView('view-scanner');
 
     html5QrCode.start(
         { facingMode: "environment" },
@@ -60,8 +103,8 @@ function startScanner(mode) {
 function stopScanner() {
     html5QrCode.stop().then(() => {
         // If an item scan is cancelled, go back to the form. Otherwise, go to main menu.
-        if (currentScanMode === 'item') {
-            showFormView();
+        if (state.scanMode === 'item') {
+            showView('view-form');
         } else {
             resetView();
         }
@@ -71,20 +114,22 @@ function stopScanner() {
 function onScanSuccess(decodedText, decodedResult) {
     html5QrCode.stop().then(() => {
         // Decide what to do with the text based on the current mode
-        if (currentScanMode === 'card') {
+        if (state.scanMode === 'card') {
             handleCard(decodedText, null);
-        } else if (currentScanMode === 'item') {
+        } else if (state.scanMode === 'item') {
             addItemToList(decodedText);
-            showFormView(); // Send them back to the form to see their list
+            showView('view-form'); // Send them back to the form to see their list
         }
     });
 }
 
 
-// --- CARD LOGIC ---
+
+
+// CARD LOGIC
 
 function handleManualInput() {
-    const inputEmail = document.getElementById('email-input').value;
+    const inputEmail = $('email-input').value;
     if (inputEmail && inputEmail.includes('@') && inputEmail.includes('.')) {
         handleCard(null, inputEmail);
     } else {
@@ -93,12 +138,10 @@ function handleManualInput() {
 }
 
 async function handleCard(cardId = null, email = null) {
-    currentCardId = cardId;
-    currentEmail = email;
+    state.cardId = cardId;
+    state.email = email;
 
-    document.getElementById('view-menu').classList.add('hidden');
-    document.getElementById('view-scanner').classList.add('hidden');
-    document.getElementById('view-manual').classList.add('hidden');
+    showView(null); // Hide all views while we check the database
 
     try {
         const response = await fetch('/api/check_user', {
@@ -109,13 +152,13 @@ async function handleCard(cardId = null, email = null) {
         const data = await response.json();
 
         if (data.exists) {
-            currentEmail = data.email;
-            currentName = data.name;
+            state.email = data.email;
+            state.name = data.name;
             showActionView();
         } else {
-            document.getElementById('view-register').classList.remove('hidden');
+            showView('view-register');
             if (email) {
-                document.getElementById('reg-email').value = email;
+                $('reg-email').value = email;
             }
         }
     } catch (error) {
@@ -126,60 +169,26 @@ async function handleCard(cardId = null, email = null) {
 
 
 function completeRegistration() {
-    const nameInput = document.getElementById('reg-name').value.trim();
-    const emailInput = document.getElementById('reg-email').value.trim();
+    const nameInput = $('reg-name').value.trim();
+    const emailInput = $('reg-email').value.trim();
 
     if (!nameInput || !emailInput) {
         alert("Please provide both Name and Email.");
         return;
     }
 
-    currentName = nameInput;
-    currentEmail = emailInput;
+    state.name = nameInput;
+    state.email = emailInput;
 
-    document.getElementById('view-register').classList.add('hidden');
     showActionView();
 }
 
-
-function showActionView() {
-    const displayEmail = currentEmail;
-    document.getElementById('display-action-mail').innerText = displayEmail;
-    document.getElementById('display-mail').innerText = displayEmail;
-    
-    document.getElementById('view-action').classList.remove('hidden');
-}
-
-
-function showFormView() {
-    document.getElementById('view-scanner').classList.add('hidden');
-    document.getElementById('view-manual').classList.add('hidden');
-    document.getElementById('view-menu').classList.add('hidden');
-    document.getElementById('view-form').classList.remove('hidden');
-}
-
-
-function selectAction(action) {
-    currentAction = action;
-
-    const submitBtn = document.getElementById('btn_submit');
-    if (action === 'rent') {
-        submitBtn.innerText = 'Confirm Rental';
-        submitBtn.className = 'btn-success';
-    } else {
-        submitBtn.innerText = 'Confirm Return';
-        submitBtn.className = 'btn-success';
-    }
-
-    document.getElementById('view-action').classList.add('hidden');
-    showFormView();
-}
 
 
 // MULTIPLE ITEMS LOGIC
 
 function addManualItem() {
-    const inputField = document.getElementById('manual-item-input');
+    const inputField = $('manual-item-input');
     const itemText = inputField.value.trim();
 
     if (itemText) {
@@ -189,21 +198,21 @@ function addManualItem() {
 }
 
 function addItemToList(itemText) {
-    rentedItems.push(itemText);
+    state.rentedItems.push(itemText);
     updateItemsListUI();
 }
 
 function removeItem(index) {
-    rentedItems.splice(index, 1); // Remove 1 item at the specific index
+    state.rentedItems.splice(index, 1); // Remove 1 item at the specific index
     updateItemsListUI();
 }
 
 function updateItemsListUI() {
-    const listEl = document.getElementById('items-list');
+    const listEl = $('items-list');
     listEl.innerHTML = ''; // Clear the current HTML list
 
     // Rebuild the HTML list from our array
-    rentedItems.forEach((item, index) => {
+    state.rentedItems.forEach((item, index) => {
         const li = document.createElement('li');
         li.innerText = item + " ";
 
@@ -218,34 +227,35 @@ function updateItemsListUI() {
     });
 }
 
+
 // --- SUBMIT LOGIC ---
 
 async function submitTransaction() {
-    if (rentedItems.length === 0) {
+    if (state.rentedItems.length === 0) {
         alert("Please add at least one item.");
         return;
     }
 
     // Items are joined into a single comma-separated string
-    const joinedItems = rentedItems.join(', ');
+    const joinedItems = state.rentedItems.join(', ');
 
     try {
         const response = await fetch('/api/transaction', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                card_id: currentCardId,
-                email: currentEmail,
-                name: currentName,
+                card_id: state.cardId,
+                email: state.email,
+                name: state.name,
                 note: joinedItems,
-                action: currentAction // Send rent or return
+                action: state.action // Send rent or return
             })
         });
 
         const data = await response.json();
 
         if (data.status === 'success') {
-            alert((currentAction === 'rent' ? "Rental" : "Return") + " Successful!\nItems: " + joinedItems);
+            alert((state.action === 'rent' ? "Rental" : "Return") + " Successful!\nItems: " + joinedItems);
             resetView();
 
         } else {

@@ -24,7 +24,7 @@
         <table>
             <thead>
                 <tr>
-                    <th>Card ID</th>
+                    <th>Email</th>
                     <th>Equipment Scanned</th>
                     <th>Rented At</th>
                     <th>Returned At</th>
@@ -33,7 +33,7 @@
             <tbody>
                 {% for transaction in transactions %}
                 <tr>
-                    <td>{{ transaction.user.card_id }}</td>
+                    <td>{{ transaction.user.email }}</td>
                     <td>{{ transaction.item.barcode }}</td>
                     
                     <td>{{ transaction.rented_at.strftime('%Y-%m-%d %H:%M') }}</td>

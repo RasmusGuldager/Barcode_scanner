@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block title %}Items{% endblock %}
+
+{% block content %}
+<h1>Items</h1>
+
+<form method="get" class="filters filters-2"
+      hx-get="{{ url_for('rental.item_list') }}" hx-target="#items" hx-select="#items"
+      hx-swap="outerHTML" hx-push-url="true" hx-trigger="input changed delay:300ms, change">
+  <input type="search" name="q" value="{{ search.q }}" placeholder="Search" aria-label="Search">
+  <select name="category" aria-label="Category">
+    <option value="">All categories</option>
+    {% for c in categories %}
+      <option {% if c == search.category %}selected{% endif %}>{{ c }}</option>
+    {% endfor %}
+  </select>
+  <noscript><button type="submit">Search</button></noscript>
+</form>
+
+<div id="items" class="table-wrap">
+  <table>
+    <thead><tr><th>Item</th><th>Category</th><th>Container</th><th>Status</th></tr></thead>
+    <tbody>
+      {% for item in items %}
+        <tr>
+          <td><a href="{{ url_for('rental.item_page', code=item.code) }}">{{ item.display_name }}</a></td>
+          <td>{{ item.category or "" }}</td>
+          <td>{{ item.container.name if item.container else "" }}</td>
+          <td>{{ "Rented out" if item.open_rental else "Available" }}</td>
+        </tr>
+      {% else %}
+        <tr><td colspan="4">No items found.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

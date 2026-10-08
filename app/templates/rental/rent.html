@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% from "_macros.html" import scanner, scanner_scripts %}
+
+{% block title %}Rent items{% endblock %}
+
+{% block content %}
+<h1>Rent items</h1>
+<p>Scan the label on each item you want to rent, then confirm.</p>
+
+{{ scanner("scan-form") }}
+
+<form id="scan-form" method="post" action="{{ url_for('rental.rent_scan') }}"
+      hx-post="{{ url_for('rental.rent_scan') }}" hx-target="#basket" hx-swap="outerHTML"
+      hx-on::after-request="this.reset()" class="code-entry">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <input type="text" name="code" autocomplete="off" autocapitalize="characters"
+         placeholder="Or type the code, e.g. K7F2Q8" aria-label="Item code" required>
+  <button type="submit">Add</button>
+</form>
+
+{% include "rental/_basket.html" %}
+{% endblock %}
+
+{% block scripts %}{{ scanner_scripts() }}{% endblock %}

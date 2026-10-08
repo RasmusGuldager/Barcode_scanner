@@ -1,0 +1,35 @@
+{% extends "admin/base.html" %}
+{% from "_macros.html" import post_button %}
+
+{% block title %}Trash{% endblock %}
+
+{% block admin_content %}
+<h1>Trash</h1>
+<p>Items in the trash are hidden everywhere and can't be rented. Their rental history is
+kept until they are deleted permanently.</p>
+
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr><th>Name</th><th>Code</th><th>Moved to trash</th><th></th></tr>
+    </thead>
+    <tbody>
+      {% for item in items %}
+        <tr>
+          <td>{{ item.display_name }}</td>
+          <td><code>{{ item.code }}</code></td>
+          <td>{{ item.deleted_at|localtime }}</td>
+          <td class="actions">
+            {{ post_button(url_for('admin.item_restore', item_id=item.id), "Restore") }}
+            {{ post_button(url_for('admin.item_delete', item_id=item.id), "Delete permanently",
+                           confirm="Delete " ~ item.display_name ~ " permanently? Its rental history and comments are deleted too. This can't be undone.",
+                           danger=True) }}
+          </td>
+        </tr>
+      {% else %}
+        <tr><td colspan="4">The trash is empty.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

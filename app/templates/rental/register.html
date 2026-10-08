@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% from "_macros.html" import field %}
+
+{% block title %}Create profile{% endblock %}
+
+{% block content %}
+<h1>Create your profile</h1>
+<p>Card <code>{{ card_number }}</code> is not registered yet. Fill in your details to
+continue.</p>
+
+<form method="post" novalidate>
+  {{ form.hidden_tag() }}
+  {{ field(form.email, autocomplete="email") }}
+  {{ field(form.study_number, autocomplete="off", inputmode="numeric") }}
+  {{ field(form.name, autocomplete="name") }}
+  <button type="submit">Create profile</button>
+</form>
+<p><a href="{{ url_for('rental.index') }}">This is not my card</a></p>
+{% endblock %}

@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" href="data:,">
+  <title>Label sheet | VAP-LAB Rental</title>
+  <style>
+    /* Sticker size. Adjust to match the sticker paper once it's chosen. */
+    :root {
+      --sticker-width: 24mm;
+      --qr-size: 18mm;
+    }
+
+    @page {
+      size: A4;
+      margin: 10mm;
+    }
+
+    body {
+      margin: 0;
+      font-family: system-ui, sans-serif;
+      color: #000;
+      background: #fff;
+    }
+
+    .toolbar {
+      padding: 1rem;
+      border-bottom: 1px solid #ccc;
+      font-size: 14px;
+    }
+
+    .sheet {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 2mm;
+      padding: 10mm;
+    }
+
+    .sticker {
+      width: var(--sticker-width);
+      padding: 1mm;
+      border: 0.2mm dashed #bbb;
+      text-align: center;
+      break-inside: avoid;
+    }
+
+    .sticker svg {
+      display: block;
+      width: var(--qr-size);
+      height: var(--qr-size);
+      margin: 0 auto;
+    }
+
+    .code {
+      font-family: ui-monospace, monospace;
+      font-size: 7pt;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+    }
+
+    .name {
+      font-size: 5.5pt;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    @media print {
+      .toolbar {
+        display: none;
+      }
+
+      .sheet {
+        padding: 0;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="toolbar">
+    {{ stickers|length }} label{{ "" if stickers|length == 1 else "s" }}.
+    <button type="button" onclick="window.print()">Print</button>
+    Print at 100% scale ("Actual size"), not "Fit to page".
+  </div>
+
+  <div class="sheet">
+    {% for sticker in stickers %}
+      <div class="sticker">
+        {{ sticker.qr }}
+        <div class="code">{{ sticker.code }}</div>
+        <div class="name">{{ sticker.name }}</div>
+      </div>
+    {% else %}
+      <p>No labels selected.</p>
+    {% endfor %}
+  </div>
+</body>
+</html>

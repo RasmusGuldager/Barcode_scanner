@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% from "_macros.html" import scanner, scanner_scripts %}
+
+{% block title %}Return items{% endblock %}
+
+{% block content %}
+<h1>Return items</h1>
+<p>Scan the item you are returning. If it has a container, put it in and scan the
+container's label.</p>
+
+{{ scanner("scan-form") }}
+
+<form id="scan-form" method="post" action="{{ url_for('rental.return_scan') }}"
+      hx-post="{{ url_for('rental.return_scan') }}" hx-target="#return-state" hx-swap="outerHTML"
+      hx-on::after-request="this.reset()" class="code-entry">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <input type="text" name="code" autocomplete="off" autocapitalize="characters"
+         placeholder="Or type the code" aria-label="Item or container code" required>
+  <button type="submit">Enter</button>
+</form>
+
+{% include "rental/_return.html" %}
+{% endblock %}
+
+{% block scripts %}{{ scanner_scripts() }}{% endblock %}

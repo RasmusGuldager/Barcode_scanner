@@ -1,0 +1,55 @@
+{% extends "admin/base.html" %}
+{% from "_macros.html" import post_button %}
+
+{% block title %}Rentals{% endblock %}
+
+{% block admin_content %}
+<h1>Rentals</h1>
+
+<h2>Rented out now</h2>
+<div class="table-wrap">
+  <table>
+    <thead><tr><th>Item</th><th>Rented by</th><th>Since</th><th></th></tr></thead>
+    <tbody>
+      {% for rental in out_now %}
+        <tr>
+          <td><a href="{{ url_for('admin.item_edit', item_id=rental.item.id) }}">{{ rental.item.display_name }}</a></td>
+          <td>{{ rental.user.display_name }}</td>
+          <td>{{ rental.rented_at|localtime }}</td>
+          <td class="actions">
+            {{ post_button(url_for('admin.rental_force_return', rental_id=rental.id), "Mark returned",
+                           confirm="Mark " ~ rental.item.display_name ~ " as returned? Only do this if the item is back.") }}
+          </td>
+        </tr>
+      {% else %}
+        <tr><td colspan="4">Nothing is rented out.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<h2>History</h2>
+<div class="table-wrap">
+  <table>
+    <thead><tr><th>Item</th><th>Rented by</th><th>Rented</th><th>Returned</th></tr></thead>
+    <tbody>
+      {% for rental in history %}
+        <tr>
+          <td>{{ rental.item.display_name }}{% if rental.item.in_trash %} (in trash){% endif %}</td>
+          <td>{{ rental.user.display_name }}</td>
+          <td>{{ rental.rented_at|localtime }}</td>
+          <td>
+            {{ rental.returned_at|localtime }}
+            {% if rental.returned_by %}<small>by admin {{ rental.returned_by.display_name }}</small>{% endif %}
+          </td>
+        </tr>
+      {% else %}
+        <tr><td colspan="4">No returned rentals yet.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% if history|length == history_limit %}
+  <p><small>Showing the latest {{ history_limit }} returns.</small></p>
+{% endif %}
+{% endblock %}

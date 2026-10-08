@@ -1,0 +1,69 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Labels{% endblock %}
+
+{% block admin_content %}
+<h1>Labels</h1>
+<p>Choose the labels to print. The sheet opens in a new tab.</p>
+
+<form method="get" action="{{ url_for('admin.labels_print') }}" target="_blank">
+  <h2>Items</h2>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th><input type="checkbox" data-select-all="item" aria-label="Select all items"></th>
+          <th>Item</th><th>Container</th><th>Label</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in items %}
+          <tr>
+            <td><input type="checkbox" name="item" value="{{ item.id }}" id="item-{{ item.id }}"></td>
+            <td><label for="item-{{ item.id }}">{{ item.display_name }}</label></td>
+            <td>{{ item.container.name if item.container else "" }}</td>
+            <td><code>{{ label_text(item) }}</code></td>
+          </tr>
+        {% else %}
+          <tr><td colspan="4">No items yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <h2>Containers</h2>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th><input type="checkbox" data-select-all="container" aria-label="Select all containers"></th>
+          <th>Container</th><th>Item</th><th>Label</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for box in containers %}
+          <tr>
+            <td><input type="checkbox" name="container" value="{{ box.id }}" id="container-{{ box.id }}"></td>
+            <td><label for="container-{{ box.id }}">{{ box.name }}</label></td>
+            <td>{{ box.item.display_name if box.item else "Empty" }}</td>
+            <td><code>{{ label_text(box) }}</code></td>
+          </tr>
+        {% else %}
+          <tr><td colspan="4">No containers yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <button type="submit">Show label sheet</button>
+</form>
+
+<script>
+  document.querySelectorAll("[data-select-all]").forEach((box) => {
+    box.addEventListener("change", () => {
+      document.querySelectorAll(`input[name="${box.dataset.selectAll}"]`)
+        .forEach((cb) => { cb.checked = box.checked; });
+    });
+  });
+</script>
+{% endblock %}

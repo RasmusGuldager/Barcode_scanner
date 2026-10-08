@@ -1,0 +1,37 @@
+{# A labelled form field with its help text and errors, styled by Pico. #}
+{% macro field(f) %}
+  <label>{{ f.label.text }}
+    {{ f(aria_invalid="true" if f.errors else False, **kwargs) }}
+    {% for error in f.errors %}<small class="error">{{ error }}</small>{% endfor %}
+    {% if f.description %}<small>{{ f.description }}</small>{% endif %}
+  </label>
+{% endmacro %}
+
+{# A button that POSTs to ``url``. Optionally asks for confirmation first. #}
+{% macro post_button(url, label, confirm=None, danger=False) %}
+  <form method="post" action="{{ url }}" class="inline"
+        {% if confirm %}onsubmit="return confirm({{ confirm|tojson|forceescape }})"{% endif %}>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button type="submit"{% if danger %} class="danger"{% endif %}>{{ label }}</button>
+  </form>
+{% endmacro %}
+
+{# Live camera scanner. Each scan is put in the "code" field of form ``form_id``
+   and the form is submitted. ``kind`` is "qr" for labels and "card" for the
+   barcode on the AAU card. Needs the scanner scripts (see scanner_scripts). #}
+{% macro scanner(form_id, kind="qr") %}
+  <div class="scanner">
+    <div data-scanner="{{ form_id }}" data-kind="{{ kind }}"></div>
+    <p class="scanner-status" role="status" hidden></p>
+  </div>
+{% endmacro %}
+
+{% macro scanner_scripts() %}
+  <script src="{{ url_for('static', filename='vendor/zxing-wasm/zxing-reader.iife.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/scanner.js') }}"
+          data-wasm="{{ url_for('static', filename='vendor/zxing-wasm/zxing_reader.wasm') }}"></script>
+{% endmacro %}
+
+{% macro message_box(message, category) %}
+  {% if message %}<p class="flash flash-{{ category }}" role="status">{{ message }}</p>{% endif %}
+{% endmacro %}

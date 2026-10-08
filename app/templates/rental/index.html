@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% from "_macros.html" import scanner, scanner_scripts %}
+
+{% block content %}
+<h1>Scan your AAU card</h1>
+<p>Hold the barcode on your card in front of the camera. You only need to do this once
+on this phone.</p>
+
+{{ scanner("card-form", kind="card") }}
+
+<form id="card-form" method="post" action="{{ url_for('rental.identify') }}">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <input type="hidden" name="next" value="{{ next }}">
+  <label>Or type your card number
+    <input type="text" name="code" inputmode="numeric" pattern="[0-9]{6}" maxlength="6"
+           autocomplete="off" placeholder="6 digits" required>
+  </label>
+  <button type="submit">Continue</button>
+</form>
+{% endblock %}
+
+{% block scripts %}{{ scanner_scripts() }}{% endblock %}

@@ -1,0 +1,14 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Admin{% endblock %}
+
+{% block admin_content %}
+<h1>Admin</h1>
+<dl class="stats">
+  <div><dt>Items</dt><dd><a href="{{ url_for('admin.item_list') }}">{{ stats["items"] }}</a></dd></div>
+  <div><dt>Rented out</dt><dd><a href="{{ url_for('admin.rentals') }}">{{ stats["rented"] }}</a></dd></div>
+  <div><dt>Containers</dt><dd><a href="{{ url_for('admin.container_list') }}">{{ stats["containers"] }}</a></dd></div>
+  <div><dt>Users</dt><dd><a href="{{ url_for('admin.user_list') }}">{{ stats["users"] }}</a></dd></div>
+  <div><dt>In trash</dt><dd><a href="{{ url_for('admin.trash') }}">{{ stats["trash"] }}</a></dd></div>
+</dl>
+{% endblock %}

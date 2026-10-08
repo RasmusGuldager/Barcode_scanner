@@ -1,0 +1,30 @@
+{% extends "admin/base.html" %}
+{% from "_macros.html" import field %}
+
+{% block title %}{{ user.display_name }}{% endblock %}
+
+{% block admin_content %}
+<h1>{{ user.display_name }}</h1>
+<p>{{ "Admin" if user.is_admin else "User" }}, registered {{ user.created_at|localtime("%d-%m-%Y") }}.</p>
+
+<form method="post" novalidate>
+  {{ form.hidden_tag() }}
+  {{ field(form.card_number, inputmode="numeric") }}
+  {{ field(form.email) }}
+  {{ field(form.study_number, inputmode="numeric") }}
+  {{ field(form.name) }}
+  <button type="submit">Save</button>
+  <a href="{{ url_for('admin.user_list') }}">Cancel</a>
+</form>
+
+<h2>Rented now</h2>
+{% if open_rentals %}
+  <ul>
+    {% for rental in open_rentals %}
+      <li>{{ rental.item.display_name }}, since {{ rental.rented_at|localtime }}</li>
+    {% endfor %}
+  </ul>
+{% else %}
+  <p>Nothing.</p>
+{% endif %}
+{% endblock %}

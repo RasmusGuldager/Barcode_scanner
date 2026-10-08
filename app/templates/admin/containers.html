@@ -1,0 +1,40 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Containers{% endblock %}
+
+{% block admin_content %}
+<div class="page-head">
+  <h1>Containers</h1>
+  <a href="{{ url_for('admin.container_new') }}" role="button">Add container</a>
+</div>
+
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr><th>Name</th><th>Code</th><th>Item</th></tr>
+    </thead>
+    <tbody>
+      {% for container in containers %}
+        <tr>
+          <td><a href="{{ url_for('admin.container_edit', container_id=container.id) }}">{{ container.name }}</a></td>
+          <td><code>{{ container.code }}</code></td>
+          <td>
+            {% if container.item %}
+              {% if container.item.in_trash %}
+                {{ container.item.display_name }} (in trash)
+              {% else %}
+                <a href="{{ url_for('admin.item_edit', item_id=container.item.id) }}">{{ container.item.display_name }}</a>
+              {% endif %}
+            {% else %}
+              Empty
+            {% endif %}
+          </td>
+        </tr>
+      {% else %}
+        <tr><td colspan="3">No containers yet.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+<p><small>To put an item in a container, edit the item and choose the container.</small></p>
+{% endblock %}

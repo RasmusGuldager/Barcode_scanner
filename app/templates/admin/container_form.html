@@ -1,0 +1,33 @@
+{% extends "admin/base.html" %}
+{% from "_macros.html" import field, post_button %}
+
+{% block title %}{{ container.name if container else "Add container" }}{% endblock %}
+
+{% block admin_content %}
+<h1>{{ container.name if container else "Add container" }}</h1>
+{% if container %}
+  <p>Label <code>{{ label_text(container) }}</code>
+    (<a href="{{ url_for('admin.labels_print', container=container.id) }}" target="_blank">print</a>).
+    {% if container.item %}
+      Holds {{ container.item.display_name }}{% if container.item.in_trash %} (in trash){% endif %}.
+    {% else %}
+      Empty.
+    {% endif %}
+  </p>
+{% endif %}
+
+<form method="post" novalidate>
+  {{ form.hidden_tag() }}
+  {{ field(form.name) }}
+  {{ field(form.description, rows=3) }}
+  <button type="submit">{{ "Save" if container else "Add" }}</button>
+  <a href="{{ url_for('admin.container_list') }}">Cancel</a>
+</form>
+
+{% if container %}
+  <hr>
+  {{ post_button(url_for('admin.container_delete', container_id=container.id), "Delete container",
+                 confirm="Delete container " ~ container.name ~ "? Its label stops working. The item inside is kept, without a container.",
+                 danger=True) }}
+{% endif %}
+{% endblock %}

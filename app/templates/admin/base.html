@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+
+{% block content %}
+<nav class="subnav" aria-label="Admin">
+  <ul>
+    {% for endpoint, label in [
+      ("admin.index", "Overview"),
+      ("admin.item_list", "Items"),
+      ("admin.rentals", "Rentals"),
+      ("admin.container_list", "Containers"),
+      ("admin.user_list", "Users"),
+      ("admin.labels", "Labels"),
+      ("admin.data", "Export"),
+      ("admin.trash", "Trash"),
+    ] %}
+      <li><a href="{{ url_for(endpoint) }}"
+             {% if request.endpoint == endpoint %}aria-current="page"{% endif %}>{{ label }}</a></li>
+    {% endfor %}
+  </ul>
+</nav>
+{% block admin_content %}{% endblock %}
+{% endblock %}

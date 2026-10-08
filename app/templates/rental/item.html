@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% from "_macros.html" import post_button %}
+
+{% block title %}{{ item.display_name }}{% endblock %}
+
+{% block content %}
+<h1>{{ item.display_name }}</h1>
+
+{% set rental = item.open_rental %}
+<p class="status">
+  {% if rental is none %}
+    Available
+  {% elif g.user and rental.user_id == g.user.id %}
+    Rented by you since {{ rental.rented_at|localtime }}
+  {% elif g.user and g.user.is_admin %}
+    Rented by {{ rental.user.display_name }} since {{ rental.rented_at|localtime }}
+  {% else %}
+    Rented out
+  {% endif %}
+</p>
+
+{% if rental is none and g.user %}
+  <form method="post" action="{{ url_for('rental.item_rent', code=item.code) }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button type="submit">Rent this item</button>
+  </form>
+{% elif rental is none %}
+  <p><a href="{{ url_for('rental.index', next=request.path) }}">Scan your card</a> to rent it.</p>
+{% elif g.user and rental.user_id == g.user.id %}
+  <p><a href="{{ url_for('rental.return_') }}" role="button">Return it</a></p>
+{% endif %}
+
+<dl class="details">
+  <dt>Label</dt><dd><code>{{ label_text(item) }}</code></dd>
+  {% if item.category %}<dt>Category</dt><dd>{{ item.category }}</dd>{% endif %}
+  <dt>Container</dt><dd>{{ item.container.name if item.container else "None" }}</dd>
+  {% if item.length_mm or item.width_mm or item.height_mm %}
+    <dt>Size</dt>
+    <dd>{{ item.length_mm or "?" }} × {{ item.width_mm or "?" }} × {{ item.height_mm or "?" }} mm</dd>
+  {% endif %}
+  {% if item.description %}<dt>Description</dt><dd>{{ item.description }}</dd>{% endif %}
+</dl>
+
+{% if g.user and g.user.is_admin %}
+  <p><a href="{{ url_for('admin.item_edit', item_id=item.id) }}">Edit item</a></p>
+{% endif %}
+
+<h2>Notes</h2>
+{% if g.user %}
+  <form method="post" action="{{ url_for('rental.comment_add', code=item.code) }}" class="note-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label>Add a note, e.g. if something is missing or broken
+      <textarea name="text" rows="2" maxlength="500" required></textarea>
+    </label>
+    <button type="submit" class="secondary">Add note</button>
+  </form>
+{% endif %}
+{% for comment in item.comments|sort(attribute="created_at", reverse=true) %}
+  <article class="note">
+    <p>{{ comment.text }}</p>
+    <footer>
+      <small>{{ comment.created_at|localtime }}{% if g.user and g.user.is_admin %},
+        {{ comment.user.display_name }}{% endif %}</small>
+      {% if g.user and g.user.is_admin %}
+        {{ post_button(url_for('rental.comment_delete', comment_id=comment.id), "Delete",
+                       confirm="Delete this note?", danger=True) }}
+      {% endif %}
+    </footer>
+  </article>
+{% else %}
+  <p>No notes.</p>
+{% endfor %}
+{% endblock %}

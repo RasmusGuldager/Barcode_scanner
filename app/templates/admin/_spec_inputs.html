@@ -1,0 +1,34 @@
+{# The spec inputs for ``category``. Swapped in by htmx when the category changes.
+   ``values`` are by input name (like the submitted form), ``errors`` by field id. #}
+<fieldset id="specs">
+  {% if fields %}
+    <legend>Specs</legend>
+    <small>Leave a spec empty if you don't know it. Products with an unknown value are
+      left out when someone filters on that spec.</small>
+    <div class="grid-specs">
+      {% for f in fields %}
+        {% set name = "spec-" ~ f.id %}
+        {% set value = values.get(name, "") %}
+        <label>{{ f.label }}
+          {% if f.kind == "choice" %}
+            <select name="{{ name }}" {% if errors[f.id] %}aria-invalid="true"{% endif %}>
+              <option value="">Unknown</option>
+              {% for o in f.options %}
+                <option value="{{ o.id }}" {% if value == o.id|string %}selected{% endif %}>{{ o.label }}</option>
+              {% endfor %}
+            </select>
+          {% else %}
+            <input name="{{ name }}" value="{{ value }}"
+                   {% if f.kind == "number" %}inputmode="decimal"{% endif %}
+                   {% if errors[f.id] %}aria-invalid="true"{% endif %}>
+          {% endif %}
+          {% if errors[f.id] %}<small class="error">{{ errors[f.id] }}</small>{% endif %}
+        </label>
+      {% endfor %}
+    </div>
+  {% elif category %}
+    <legend>Specs</legend>
+    <small>{{ category.name }} has no spec fields yet.
+      <a href="{{ url_for('admin.category_edit', category_id=category.id) }}">Add spec fields</a>.</small>
+  {% endif %}
+</fieldset>

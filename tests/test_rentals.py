@@ -1,6 +1,6 @@
 import pytest
 
-from app.models import Container, Item, Rental, User
+from app.models import Container, Item, Product, Rental, User
 from app.services.rentals import (
     RentalError,
     force_return,
@@ -22,7 +22,7 @@ def box(db):
 
 @pytest.fixture
 def camera(db, box):
-    item = Item(code="CAMAAA", name="Basler ace", number=5, container=box)
+    item = Item(code="CAMAAA", product=Product(name="Basler ace"), number=5, container=box)
     db.session.add(item)
     db.session.commit()
     return item
@@ -30,7 +30,7 @@ def camera(db, box):
 
 @pytest.fixture
 def cable(db):
-    item = Item(code="CABAAA", name="USB-C cable")
+    item = Item(code="CABAAA", product=Product(name="USB-C cable"))
     db.session.add(item)
     db.session.commit()
     return item
@@ -129,7 +129,7 @@ def test_only_renter_can_return(db, user, make_user, cable):
     with pytest.raises(RentalError, match="Only the person who rented it"):
         return_item(make_user(), cable, None)
     with pytest.raises(RentalError, match="not rented out"):
-        return_item(user, Item(code="X", name="Other"), None)
+        return_item(user, Item(code="X", product=Product(name="Other")), None)
 
 
 def test_force_return(db, user, make_user, camera):
@@ -332,9 +332,9 @@ def test_trashed_item_page_is_404(client, db, camera):
 
 
 def test_public_item_list(client, db, camera, cable):
-    page = client.get("/items?q=basler").data
-    assert b"Basler ace #5" in page
-    assert b"USB-C cable" not in page
+    page = client.get("/items?q=basler").get_data(as_text=True)
+    assert "Basler ace" in page and "1 of 1" in page
+    assert "USB-C cable" not in page
 
 
 def test_me_lists_rentals(client, db, signed_in, camera):

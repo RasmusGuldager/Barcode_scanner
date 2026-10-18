@@ -97,6 +97,16 @@ def run_migrations_online():
     connectable = get_engine()
 
     with connectable.connect() as connection:
+        sqlite = connection.dialect.name == "sqlite"
+        if sqlite:
+            # The app turns foreign keys on for every connection. Alembic changes
+            # SQLite tables by copying and dropping them, and dropping e.g. the
+            # item table would then cascade-delete every rental and note. So turn
+            # them off while migrating (only possible outside a transaction), and
+            # check at the end that nothing points to a missing row.
+            connection.exec_driver_sql("PRAGMA foreign_keys=OFF")
+            connection.commit()
+
         context.configure(
             connection=connection,
             target_metadata=get_metadata(),
@@ -105,6 +115,10 @@ def run_migrations_online():
 
         with context.begin_transaction():
             context.run_migrations()
+            if sqlite:
+                broken = connection.exec_driver_sql("PRAGMA foreign_key_check").fetchall()
+                if broken:
+                    raise RuntimeError(f"Migration left broken references: {broken}")
 
 
 if context.is_offline_mode():

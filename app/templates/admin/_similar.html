@@ -1,0 +1,19 @@
+{# Existing products with a name like the one being typed on the new-product form. #}
+<div id="similar" class="similar" aria-live="polite">
+  {% if similar %}
+    <small>Existing products with a similar name:</small>
+    <ul>
+      {% for product in similar %}
+        {% set count = product.active_items|length %}
+        <li>
+          <span>
+            <strong>{{ product.name }}</strong>
+            {{ count }} item{{ "" if count == 1 else "s" }}{% if product.category %},
+            {{ product.category.name }}{% endif %}
+          </span>
+          <a href="{{ url_for('admin.product_edit', product_id=product.id, _anchor='copies') }}">Add copies</a>
+        </li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+</div>

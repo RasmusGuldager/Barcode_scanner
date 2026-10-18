@@ -2,7 +2,20 @@ import re
 
 import pytest
 
-from app.models import Comment, Container, Item, Rental
+from app.models import (
+    CHOICE,
+    NUMBER,
+    TEXT,
+    Category,
+    Comment,
+    Container,
+    Item,
+    Product,
+    Rental,
+    SpecField,
+    SpecOption,
+    SpecValue,
+)
 from app.services.codes import ALPHABET, LENGTH
 
 
@@ -13,83 +26,241 @@ def admin(client, make_user, login):
     return user
 
 
-def add_item(db, **fields) -> Item:
-    item = Item(code=fields.pop("code", f"T{Item.query.count():05d}"), **fields)
+def product(db, name: str = "Basler ace", **fields) -> Product:
+    """The product called ``name``, created with ``fields`` if it doesn't exist."""
+    found = db.session.execute(db.select(Product).filter_by(name=name)).scalar_one_or_none()
+    if found is None:
+        found = Product(name=name, **fields)
+        db.session.add(found)
+        db.session.commit()
+    return found
+
+
+def add_item(db, name: str = "Basler ace", **fields) -> Item:
+    """A new copy of the product called ``name``."""
+    item = Item(code=fields.pop("code", f"T{Item.query.count():05d}"),
+                product=product(db, name), **fields)
     db.session.add(item)
     db.session.commit()
     return item
 
 
-# Items
+@pytest.fixture
+def camera(db):
+    """A Camera category with one field of each kind."""
+    category = Category(name="Camera", fields=[
+        SpecField(name="Shutter", kind=CHOICE, position=1,
+                  options=[SpecOption(label="Global"), SpecOption(label="Rolling")]),
+        SpecField(name="Max frame rate", kind=NUMBER, unit="fps", position=2),
+        SpecField(name="Sensor", kind=TEXT, position=3),
+    ])
+    db.session.add(category)
+    db.session.commit()
+    return category
 
 
-def test_create_item_gets_a_valid_code(client, db, admin):
-    response = client.post("/admin/items/new", data={"name": "Basler ace", "copies": 1})
-    assert response.status_code == 302
-    item = db.session.execute(db.select(Item)).scalar_one()
-    assert re.fullmatch(f"[{ALPHABET}]{{{LENGTH}}}", item.code)
-    assert item.number is None
+def specs_of(p: Product) -> dict:
+    return {s.field.name: s.value for s in p.specs}
 
 
-def test_create_copies_are_numbered(client, db, admin):
-    client.post("/admin/items/new",
-                data={"name": "Basler ace", "number": 3, "copies": 4, "container_id": 0})
-    items = db.session.execute(db.select(Item).order_by(Item.number)).scalars().all()
-    assert [i.number for i in items] == [3, 4, 5, 6]
-    assert len({i.code for i in items}) == 4
+# Products
 
 
-def test_copies_without_number_start_at_one(client, db, admin):
-    client.post("/admin/items/new", data={"name": "Cable", "copies": 2})
-    numbers = db.session.execute(db.select(Item.number).order_by(Item.number)).scalars()
-    assert list(numbers) == [1, 2]
+def test_new_product_with_copies(client, db, admin):
+    response = client.post("/admin/products/new", data={"name": "Basler ace", "copies": 2})
+    p = db.session.execute(db.select(Product)).scalar_one()
+    assert response.headers["Location"] == f"/admin/products/{p.id}/edit"
+    assert [i.number for i in p.items] == [1, 2]
+    for item in p.items:
+        assert re.fullmatch(f"[{ALPHABET}]{{{LENGTH}}}", item.code)
+    page = client.get(response.headers["Location"]).get_data(as_text=True)
+    assert "Added Basler ace #1, Basler ace #2." in page
+
+
+def test_add_copies_continues_numbering_including_trash(client, db, admin):
+    first = add_item(db)
+    add_item(db)
+    client.post(f"/admin/items/{first.id}/trash")
+    client.post(f"/admin/products/{first.product_id}/copies", data={"copies": 2})
+    assert [i.number for i in first.product.items] == [1, 2, 3, 4]
+    client.post(f"/admin/products/{first.product_id}/copies", data={"copies": 0})
+    assert len(first.product.items) == 4
+
+
+def test_product_names_are_unique_ignoring_case(client, db, admin):
+    product(db, "Basler ace")
+    page = client.post("/admin/products/new", data={"name": "basler ACE", "copies": 1})
+    assert b"There is already a product called Basler ace" in page.data
+    assert Product.query.count() == 1
+
+
+def test_rename_product_keeps_numbers(client, db, admin):
+    item = add_item(db, number=7)
+    client.post(f"/admin/products/{item.product_id}/edit", data={"name": "Basler ace 2"})
+    assert item.display_name == "Basler ace 2 #7"
+
+
+def test_category_existing_or_new(client, db, admin, camera):
+    page = client.get("/admin/products/new").data
+    assert f'<option value="{camera.id}">Camera</option>'.encode() in page
+    assert b"New category..." in page
+
+    def new(name, **data):
+        return client.post("/admin/products/new", data={"name": name, "copies": 1, **data})
+
+    new("A", category=camera.id)
+    new("B", category="__new__", new_category="Mount")
+    new("C", category="__new__", new_category="camera")  # exists already
+    new("D", category="")
+    by_name = {p.name: p.category.name if p.category else None for p in Product.query.all()}
+    assert by_name == {"A": "Camera", "B": "Mount", "C": "Camera", "D": None}
+    assert Category.query.count() == 2
+
+    assert b"Type the name of the new category" in new("E", category="__new__").data
+    assert b"Not a valid choice" in new("E", category="999").data
+    assert Product.query.filter_by(name="E").first() is None
+
+
+def test_similar_products_while_typing(client, db, admin):
+    for _ in range(3):
+        add_item(db, "Basler ace")
+    add_item(db, "Tripod")
+
+    page = client.get("/admin/products/similar?name=basl").get_data(as_text=True)
+    assert "Basler ace" in page and "3 items" in page and "Add copies" in page
+    assert "Tripod" not in page
+    assert "<html" not in page
+    assert "Basler ace" in client.get("/admin/products/similar?name=Balser").get_data(as_text=True)
+    assert "Basler" not in client.get("/admin/products/similar?name=b").get_data(as_text=True)
+
+
+def test_spec_inputs_follow_the_category(client, db, admin, camera):
+    page = client.get(f"/admin/products/spec-inputs?category={camera.id}").get_data(as_text=True)
+    assert "Max frame rate (fps)" in page and ">Global</option>" in page
+    assert "<html" not in page
+    assert "<legend>" not in client.get("/admin/products/spec-inputs?category=").get_data(as_text=True)
+
+
+def test_save_specs(client, db, admin, camera):
+    shutter, fps, sensor = camera.fields
+    p = product(db, category=camera)
+    url = f"/admin/products/{p.id}/edit"
+    data = {"name": "Basler ace", "category": camera.id,
+            f"spec-{shutter.id}": shutter.options[0].id, f"spec-{fps.id}": "41,5",
+            f"spec-{sensor.id}": "Sony IMX174"}
+    client.post(url, data=data)
+    assert specs_of(p) == {"Shutter": "Global", "Max frame rate": 41.5, "Sensor": "Sony IMX174"}
+    page = client.get(url).get_data(as_text=True)
+    assert 'value="41.5"' in page
+    assert f'<option value="{shutter.options[0].id}" selected>Global</option>' in page
+
+    # Empty means unknown.
+    client.post(url, data={**data, f"spec-{sensor.id}": ""})
+    assert "Sensor" not in specs_of(p)
+
+    page = client.post(url, data={**data, f"spec-{fps.id}": "fast"}).get_data(as_text=True)
+    assert "Enter a number" in page and 'value="fast"' in page
+    assert specs_of(p)["Max frame rate"] == 41.5
+
+    # Another category's option id is not accepted.
+    lens = Category(name="Lens", fields=[SpecField(name="Mount", kind=CHOICE,
+                                                   options=[SpecOption(label="C")])])
+    db.session.add(lens)
+    db.session.commit()
+    page = client.post(url, data={**data, f"spec-{shutter.id}": lens.fields[0].options[0].id})
+    assert b"Not one of the options" in page.data
+
+    # Moving to another category drops the old values.
+    client.post(url, data={"name": "Basler ace", "category": lens.id})
+    assert specs_of(p) == {}
+
+
+def test_new_product_with_specs(client, db, admin, camera):
+    fps = camera.fields[1]
+    client.post("/admin/products/new", data={"name": "Mako", "copies": 1,
+                                             "category": camera.id, f"spec-{fps.id}": "60"})
+    assert specs_of(Product.query.one()) == {"Max frame rate": 60}
+
+    page = client.post("/admin/products/new", data={"name": "Ace", "copies": 1,
+                                                    "category": camera.id,
+                                                    f"spec-{fps.id}": "x"})
+    assert b"Enter a number" in page.data
+    assert Product.query.count() == 1 and Item.query.count() == 1
 
 
 def test_copies_cannot_share_a_container(client, db, admin):
     box = Container(code="BOX001", name="B3-05")
     db.session.add(box)
     db.session.commit()
-    response = client.post("/admin/items/new",
+    response = client.post("/admin/products/new",
                            data={"name": "Cable", "copies": 2, "container_id": box.id})
-    assert response.status_code == 200
     assert b"Leave the container empty" in response.data
     assert Item.query.count() == 0
 
+    client.post("/admin/products/new", data={"name": "Cable", "copies": 1,
+                                             "container_id": box.id})
+    assert Item.query.one().container == box
 
-def test_edit_item_and_assign_container(client, db, admin):
-    item = add_item(db, name="Old name")
+
+def test_delete_product_only_without_items(client, db, admin):
+    item = add_item(db)
+    client.post(f"/admin/products/{item.product_id}/delete")
+    assert Product.query.count() == 1
+    client.post(f"/admin/items/{item.id}/trash")
+    client.post(f"/admin/trash/{item.id}/delete")
+    client.post(f"/admin/products/{item.product_id}/delete")
+    assert Product.query.count() == 0
+
+
+def test_admin_product_list(client, db, admin, camera):
+    product(db, "Basler ace", category=camera)
+    product(db, "Tripod")
+    page = client.get("/admin/products?category=Camera").get_data(as_text=True)
+    assert "Basler ace" in page and "Tripod" not in page and "0 of 3" in page
+
+
+# Items
+
+
+def test_edit_item_container(client, db, admin):
+    item = add_item(db)
     box = Container(code="BOX001", name="B3-05")
     db.session.add(box)
     db.session.commit()
     client.post(f"/admin/items/{item.id}/edit",
-                data={"name": "New name", "container_id": box.id, "length_mm": 120})
-    assert item.name == "New name"
+                data={"product_id": item.product_id, "container_id": box.id})
     assert item.container == box
-    assert item.length_mm == 120
+    client.post(f"/admin/items/{item.id}/edit",
+                data={"product_id": item.product_id, "container_id": 0})
+    assert item.container is None
+
+
+def test_move_item_to_another_product(client, db, admin):
+    add_item(db, "Tripod")
+    item = add_item(db, "Basler ace")
+    tripod = product(db, "Tripod")
+    response = client.post(f"/admin/items/{item.id}/edit",
+                           data={"product_id": tripod.id, "container_id": 0})
+    assert response.status_code == 302
+    assert item.display_name == "Tripod #2"
 
 
 def test_full_container_is_not_offered(client, db, admin):
     box = Container(code="BOX001", name="B3-05")
-    first = add_item(db, name="First", container=box)
-    second = add_item(db, name="Second")
+    first = add_item(db, "First", container=box)
+    second = add_item(db, "Second")
     response = client.post(f"/admin/items/{second.id}/edit",
-                           data={"name": "Second", "container_id": box.id})
+                           data={"product_id": second.product_id, "container_id": box.id})
     assert response.status_code == 200  # form shown again with an error
     assert second.container is None
     assert first.container == box
 
 
-def test_unassign_container(client, db, admin):
-    box = Container(code="BOX001", name="B3-05")
-    item = add_item(db, name="Item", container=box)
-    client.post(f"/admin/items/{item.id}/edit", data={"name": "Item", "container_id": 0})
-    assert item.container is None
-
-
 def test_item_list_search_and_sort(client, db, admin):
-    add_item(db, name="Basler ace", length_mm=50)
-    add_item(db, name="Tripod", length_mm=900)
-    add_item(db, name="Cable")  # unknown length goes last
+    product(db, "Basler ace", length_mm=50)
+    product(db, "Tripod", length_mm=900)
+    for name in ["Basler ace", "Tripod", "Cable"]:  # unknown length goes last
+        add_item(db, name)
 
     response = client.get("/admin/items?q=basler")
     assert b"Basler ace" in response.data
@@ -97,6 +268,92 @@ def test_item_list_search_and_sort(client, db, admin):
 
     page = client.get("/admin/items?sort=length&dir=desc").get_data(as_text=True)
     assert page.index("Tripod") < page.index("Basler ace") < page.index("Cable")
+
+
+# Categories and spec fields
+
+
+def test_add_category_and_fields(client, db, admin):
+    response = client.post("/admin/categories", data={"name": "Camera"})
+    camera = Category.query.one()
+    assert response.headers["Location"] == f"/admin/categories/{camera.id}/edit"
+    assert b"There is already a category" in client.post("/admin/categories",
+                                                         data={"name": "camera"}).data
+
+    url = f"/admin/categories/{camera.id}/fields/new"
+    client.post(url, data={"name": "Shutter", "kind": "choice",
+                           "options": "Global\n rolling \n\nGLOBAL\nRolling", "unit": "x"})
+    client.post(url, data={"name": "Max frame rate", "kind": "number", "unit": "fps"})
+    shutter, fps = camera.fields
+    assert [o.label for o in shutter.options] == ["Global", "rolling"]
+    assert shutter.unit is None  # units are for numbers only
+    assert (fps.unit, fps.position) == ("fps", 2)
+
+    for data, error in [
+        ({"name": "shutter", "kind": "text"}, b"There is already a field"),
+        ({"name": "Max frame-rate", "kind": "text"}, b"Too similar"),
+        ({"name": "Max frame rate min", "kind": "text"}, b"Too similar"),  # max_frame_rate_min
+        ({"name": "Category", "kind": "text"}, b"Too similar"),
+        ({"name": "!!", "kind": "text"}, b"at least one letter"),
+        ({"name": "Mount", "kind": "choice", "options": ""}, b"Type at least one option"),
+    ]:
+        assert error in client.post(url, data=data).data, data
+    assert len(camera.fields) == 2
+
+
+def test_edit_field_and_options(client, db, admin, camera):
+    shutter, fps, _ = camera.fields
+    p = product(db, category=camera)
+    p.specs.append(SpecValue(field=shutter, option=shutter.options[1]))
+    p.specs.append(SpecValue(field=fps, number=60))
+    db.session.commit()
+    page = client.get(f"/admin/fields/{shutter.id}/edit").get_data(as_text=True)
+    assert "used by 1 product" in page
+
+    client.post(f"/admin/fields/{fps.id}/edit", data={"name": "Frame rate", "unit": "Hz"})
+    assert (fps.name, fps.unit) == ("Frame rate", "Hz")
+
+    rolling = shutter.options[1]
+    client.post(f"/admin/options/{rolling.id}/rename", data={"label": "Rolling shutter"})
+    assert specs_of(p)["Shutter"] == "Rolling shutter"  # renaming keeps the value
+    client.post(f"/admin/options/{rolling.id}/rename", data={"label": "global"})
+    assert rolling.label == "Rolling shutter"  # clashes with Global
+
+    client.post(f"/admin/fields/{shutter.id}/options", data={"label": "Global reset"})
+    assert [o.label for o in shutter.options] == ["Global", "Rolling shutter", "Global reset"]
+
+    client.post(f"/admin/options/{rolling.id}/delete")
+    db.session.expire_all()
+    assert "Shutter" not in specs_of(p)  # the product's value is now unknown
+
+
+def test_move_and_delete_fields(client, db, admin, camera):
+    shutter, fps, sensor = camera.fields
+    p = product(db, category=camera)
+    p.specs.append(SpecValue(field=fps, number=60))
+    db.session.commit()
+
+    client.post(f"/admin/fields/{sensor.id}/move", data={"direction": "up"})
+    client.post(f"/admin/fields/{shutter.id}/move", data={"direction": "up"})  # already first
+    db.session.expire_all()
+    assert [f.name for f in camera.fields] == ["Shutter", "Sensor", "Max frame rate"]
+
+    client.post(f"/admin/fields/{fps.id}/delete")
+    db.session.expire_all()
+    assert [f.name for f in camera.fields] == ["Shutter", "Sensor"]
+    assert specs_of(p) == {}
+
+
+def test_delete_category_keeps_products(client, db, admin, camera):
+    item = add_item(db)
+    item.product.category = camera
+    item.product.specs.append(SpecValue(field=camera.fields[1], number=60))
+    db.session.commit()
+    client.post(f"/admin/categories/{camera.id}/delete")
+    db.session.expire_all()
+    assert Category.query.count() == 0
+    assert item.product.category is None and item.product.specs == []
+    assert Item.query.count() == 1
 
 
 # Trash
@@ -173,7 +430,16 @@ def test_admin_cannot_demote_self(client, db, admin):
 def test_admin_pages_render(client, db, admin):
     box = Container(code="BOX001", name="B3-05")
     item = add_item(db, name="Basler ace", number=5, container=box)
-    for url in ["/admin/", "/admin/items", "/admin/items/new", f"/admin/items/{item.id}/edit",
+    category = Category(name="Camera", fields=[
+        SpecField(name="Shutter", kind=CHOICE, options=[SpecOption(label="Global")])])
+    item.product.category = category
+    db.session.commit()
+    field = category.fields[0]
+    for url in ["/admin/", "/admin/items", f"/admin/items/{item.id}/edit",
+                "/admin/products", "/admin/products/new",
+                f"/admin/products/{item.product_id}/edit", "/admin/categories",
+                f"/admin/categories/{category.id}/edit",
+                f"/admin/categories/{category.id}/fields/new", f"/admin/fields/{field.id}/edit",
                 "/admin/containers", "/admin/containers/new",
                 f"/admin/containers/{box.id}/edit", "/admin/users", "/admin/trash"]:
         assert client.get(url).status_code == 200, url

@@ -4,8 +4,9 @@ from flask import abort, flash, g, redirect, render_template, request, url_for
 
 from ..auth import login_required
 from ..extensions import db
-from ..models import Item
-from ..services.inventory import ItemSearch, categories
+from ..models import Item, Product
+from ..services.catalog import ProductSearch
+from ..services.inventory import categories
 from ..services.rentals import RentalError, rent_items
 from . import bp
 
@@ -21,12 +22,19 @@ def get_item_by_code_or_404(code: str) -> Item:
 
 @bp.get("/items")
 def item_list():
-    search = ItemSearch(
-        q=request.args.get("q", "").strip(), category=request.args.get("category", "")
-    )
-    return render_template(
-        "rental/items.html", items=search.run(), categories=categories(), search=search
-    )
+    """Products, filtered by category, availability and specs."""
+    search = ProductSearch.from_args(request.args)
+    rows, unknown = search.run()
+    return render_template("rental/items.html", rows=rows, unknown=unknown,
+                           search=search, categories=categories())
+
+
+@bp.get("/products/<int:product_id>")
+def product_page(product_id: int):
+    product = db.get_or_404(Product, product_id)
+    if not product.active_items:
+        abort(404)
+    return render_template("rental/product.html", product=product)
 
 
 @bp.get("/i/<code>")

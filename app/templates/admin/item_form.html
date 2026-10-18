@@ -1,49 +1,31 @@
 {% extends "admin/base.html" %}
 {% from "_macros.html" import field, post_button %}
 
-{% block title %}{{ item.display_name if item else "Add item" }}{% endblock %}
+{% block title %}{{ item.display_name }}{% endblock %}
 
 {% block admin_content %}
-<h1>{{ item.display_name if item else "Add item" }}</h1>
-{% if item %}
-  <p>Label <code>{{ label_text(item) }}</code>
-    (<a href="{{ url_for('admin.labels_print', item=item.id) }}" target="_blank">print</a>).
-    {% if item.open_rental %}
-      Rented by {{ item.open_rental.user.display_name }} since
-      {{ item.open_rental.rented_at|localtime }}.
-    {% else %}
-      Available.
-    {% endif %}
-  </p>
-{% endif %}
+<h1>{{ item.display_name }}</h1>
+<p>Label <code>{{ label_text(item) }}</code>
+  (<a href="{{ url_for('admin.labels_print', item=item.id) }}" target="_blank">print</a>).
+  {% if item.open_rental %}
+    Rented by {{ item.open_rental.user.display_name }} since
+    {{ item.open_rental.rented_at|localtime }}.
+  {% else %}
+    Available.
+  {% endif %}
+</p>
+<p>Category, specs, description and size are the same for every copy:
+  <a href="{{ url_for('admin.product_edit', product_id=item.product_id) }}">edit the product
+  {{ item.product.name }}</a>.</p>
 
 <form method="post" novalidate>
   {{ form.hidden_tag() }}
-  <div class="grid-2">
-    {{ field(form.name) }}
-    {{ field(form.number, inputmode="numeric") }}
-  </div>
-  {{ field(form.category, list="categories") }}
-  <datalist id="categories">
-    {% for c in categories %}<option value="{{ c }}">{% endfor %}
-  </datalist>
-  {{ field(form.description, rows=3) }}
   {{ field(form.container_id) }}
-  <fieldset>
-    <legend>Size</legend>
-    <div class="grid-3">
-      {{ field(form.length_mm, inputmode="numeric") }}
-      {{ field(form.width_mm, inputmode="numeric") }}
-      {{ field(form.height_mm, inputmode="numeric") }}
-    </div>
-  </fieldset>
-  {% if form.copies %}{{ field(form.copies, inputmode="numeric") }}{% endif %}
-  <button type="submit">{{ "Save" if item else "Add" }}</button>
+  {{ field(form.product_id) }}
+  <button type="submit">Save</button>
   <a href="{{ url_for('admin.item_list') }}">Cancel</a>
 </form>
 
-{% if item %}
-  <hr>
-  {{ post_button(url_for('admin.item_trash', item_id=item.id), "Move to trash", danger=True) }}
-{% endif %}
+<hr>
+{{ post_button(url_for('admin.item_trash', item_id=item.id), "Move to trash", danger=True) }}
 {% endblock %}

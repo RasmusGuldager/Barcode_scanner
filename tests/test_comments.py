@@ -1,6 +1,6 @@
 import pytest
 
-from app.models import Comment, Item
+from app.models import Comment, Item, Product
 from app.services.rentals import rent_items
 
 HX = {"HX-Request": "true"}
@@ -8,7 +8,7 @@ HX = {"HX-Request": "true"}
 
 @pytest.fixture
 def item(db):
-    item = Item(code="CAMAAA", name="Basler ace", number=5)
+    item = Item(code="CAMAAA", product=Product(name="Basler ace"), number=5)
     db.session.add(item)
     db.session.commit()
     return item

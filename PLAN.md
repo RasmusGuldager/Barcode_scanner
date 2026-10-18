@@ -39,6 +39,9 @@ and add or remove items as decisions change.
 | Topic | Decision |
 |---|---|
 | Item identity | Each physical item has its own QR label and record, e.g. "Basler ace #5". |
+| Products | A **product** is a kind of equipment (e.g. a camera model) and holds everything that is the same for all copies: name, category, specs, description and size. An **item** is one physical copy: code, number, container, rentals, notes. Same idea as asset models vs. assets in Snipe-IT. A product can only be deleted when it has no items, also counting the trash. |
+| Categories and specs | Categories are records of their own. Each category has **spec fields** defined by admins on `/admin/categories`, e.g. Camera: Shutter, Max frame rate. Field types: **choice** (fixed list of options, e.g. Global / Rolling), **number** (with a unit, e.g. fps), **text** (searchable, not a filter). The type is fixed once created. Renaming an option keeps it on every product. An empty value means unknown. |
+| Filtering | The public item list (`/items`) shows one row per product with "N of M available". Category tabs at the top; choosing one shows its specs as table columns and as filters (checkboxes for choices, min/max for numbers). Only available products by default. Filters live in the URL (`?category=Camera&shutter=Global&max_frame_rate_min=60`), so a filtered list can be shared. Products with an unknown value for a filtered spec are left out, with a note saying how many. No reservations: "available" means available now. |
 | Item code | A random 6-character code made when the item is created, e.g. `K7F2Q8`. It never changes and is the item's permanent ID, also in exports. |
 | QR content | Only a prefixed code, e.g. `VAP-K7F2Q8`. There's no URL, so labels keep working if the server address changes. |
 | Scanning | The in-browser scanner is the only way to scan items. The QR code on the locker is the only one holding a full URL. |
@@ -46,6 +49,8 @@ and add or remove items as decisions change.
 | Containers | A container holds exactly one item. Containers are records of their own with a QR label (`BOX-<code>`) and a readable name/location (e.g. "Shelf B3, box 05"). An item may have no container; an admin can assign one at any time, even while the item is rented. |
 | User identity | The card scan gives only a card number, so users create a short profile the first time they scan. |
 | Item name | Items have a readable name as well as the code. |
+| Item number | Assigned automatically, never typed in: the next free number among the product's items (counting trashed items). Renaming a product keeps the numbers. Moving an item to another product (to fix a mistake) gives it the next number there. The database enforces that product + number is unique, and product names are unique ignoring upper/lower case. |
+| Adding items | "Add product" creates a product with N copies. While typing the name, existing products with similar names are shown (also with typos), with an "Add copies" link to that product. Category is chosen from existing ones or typed as a new one; choosing it swaps in that category's spec inputs. |
 | Comments | Kept minimal: a short note on an item. No threads and no workflow. |
 | Old data | Not migrated. We start with an empty database. |
 | Who can rent | Only people with an AAU card. Non-AAU users may come later (see Open ideas). |
@@ -138,10 +143,13 @@ CLI commands: `flask make-admin <email>`, `flask export`, `flask import`, `flask
 | `/me` | user | My current rentals, and a button to start scanning |
 | `/rent` | user | Scanner: scan items, then "Rent N items" |
 | `/return` | user | Scanner: scan an item, then its container (if it has one) |
-| `/i/<code>` | everyone | Item page: name, container, status, comments, Rent button (linked from lists and history) |
-| `/items` | everyone | Browse and search the inventory, with container (read-only) |
+| `/i/<code>` | everyone | Item page: name, container, status, product specs, comments, Rent button (linked from lists and history) |
+| `/items` | everyone | Products with "N of M available", filtered by category, availability and specs |
+| `/products/<id>` | everyone | Product page: specs, and each copy with its status and container |
 | `/logout` | user | Forget who this phone belongs to ("not you?") |
-| `/admin/items`, `/admin/items/new`, `/admin/items/<id>/edit` | admin | Inventory management |
+| `/admin/items`, `/admin/items/<id>/edit` | admin | Physical copies: container, product, trash |
+| `/admin/products`, `/admin/products/new`, `/admin/products/<id>/edit` | admin | Products: name, category, specs, size, and adding copies |
+| `/admin/categories`, `/admin/categories/<id>/edit`, `/admin/fields/<id>/edit` | admin | Categories, their spec fields and options |
 | `/admin/containers`, `/admin/containers/new`, `/admin/containers/<id>/edit` | admin | Container management |
 | `/admin/rentals` | admin | What is out right now, and the full history. Force-return button. |
 | `/admin/trash` | admin | Trashed items: restore or delete permanently |
@@ -156,10 +164,22 @@ CLI commands: `flask make-admin <email>`, `flask export`, `flask import`, `flask
 **User**: `id`, `card_number` (unique, 6 digits), `name` (optional), `email` (required),
 `study_number` (8 digits, required), `is_admin`, `created_at`
 
-**Item**: `id`, `code` (unique, random, never changes, no prefix), `name` (e.g. "Basler ace"),
-`number` (e.g. 5, optional), `category`, `description`, `container_id` (optional,
-unique: one item per container),
-`length_mm`, `width_mm`, `height_mm`, `created_at`, `updated_at`, `deleted_at`
+**Category**: `id`, `name` (unique)
+
+**SpecField**: `id`, `category_id`, `name` (unique within the category), `kind` (choice,
+number or text), `unit` (numbers only), `position` (order on forms and in lists)
+
+**SpecOption**: `id`, `field_id`, `label` (unique within the field)
+
+**Product**: `id`, `name` (unique, e.g. "Basler ace"), `category_id` (optional),
+`description`, `length_mm`, `width_mm`, `height_mm`, `created_at`, `updated_at`
+
+**SpecValue**: `product_id` + `field_id` (together the key), and one of `option_id`,
+`number` or `text`. No row means unknown.
+
+**Item**: `id`, `code` (unique, random, never changes, no prefix), `product_id`,
+`number` (automatic, unique together with the product), `container_id` (optional,
+unique: one item per container), `created_at`, `updated_at`, `deleted_at`
 (set when the item is in the trash, otherwise empty)
 
 **Container**: `id`, `code` (unique, random, never changes, no prefix), `name`
@@ -182,14 +202,18 @@ All timestamps are stored in UTC and shown in Danish time.
 
 ## Export / import format
 
-- Use **JSON** with a `schema_version` field (currently 1). Flat lists of users,
-  containers, items, rentals and comments. It's readable and works well with `git diff`.
+- Use **JSON** with a `schema_version` field (currently 2). Flat lists of users,
+  containers, categories (with their spec fields and options), products (with their
+  spec values by field name), items, rentals and comments. It's readable and works well
+  with `git diff`.
+- Version 1 files (from before products) can still be imported: items with the same
+  name become copies of one product.
 - `flask export data.json` and `flask import data.json --mode merge|replace`, plus
   download and upload on `/admin/data`.
 - Import has two modes:
   - **replace**: wipe the database and load the file.
-  - **merge**: insert or update rows, matching items by `code` and users by
-    `card_number`, containers by `code`.
+  - **merge**: insert or update rows, matching items by `code`, users by
+    `card_number`, containers by `code`, and products and categories by name.
 - References between records use those natural keys, not database IDs, so merging
   works across machines. Rentals are matched by item + `rented_at`, comments by
   item + user + time + text, so merging the same file twice adds nothing.
@@ -284,6 +308,19 @@ All timestamps are stored in UTC and shown in Danish time.
 - [x] Round-trip test: export → import into an empty DB → identical data
 - [x] Daily backup service with 30-day retention (`backup` service in compose; the
       newest 30 files are kept, and backups can be downloaded from `/admin/data`)
+
+### Phase 8: Products, specs and filters
+- [x] Split items into products (shared details) and items (physical copies); migration
+      groups existing items by name
+- [x] Categories as records, with spec fields (choice, number, text) defined by admins
+- [x] Spec inputs on the product form, swapped in when the category changes
+- [x] Public item list: one row per product, category tabs, spec filters in the URL,
+      "only available now", note about products with unknown specs
+- [x] Product page, and specs on the item page
+- [x] Export/import schema version 2 (version 1 files still import)
+- [x] Migrations run with SQLite foreign keys off, so rebuilding a table can't
+      cascade-delete rentals and notes (found while testing this migration)
+- [ ] Fill in the specs for all products, from the data sheets
 
 ### Phase 7: Deploy
 - [ ] Deploy to the AAU server

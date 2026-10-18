@@ -1,0 +1,46 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Products{% endblock %}
+
+{% block admin_content %}
+<div class="page-head">
+  <h1>Products</h1>
+  <a href="{{ url_for('admin.product_new') }}" role="button">Add product</a>
+</div>
+<p>A product is a kind of equipment, e.g. a camera model. Its category, specs and size
+are shared by all its copies (items).</p>
+
+<form method="get" class="filters filters-2"
+      hx-get="{{ url_for('admin.product_list') }}" hx-target="#products" hx-select="#products"
+      hx-swap="outerHTML" hx-push-url="true" hx-trigger="input changed delay:300ms, change">
+  <input type="search" name="q" value="{{ q }}" placeholder="Search name" aria-label="Search">
+  <select name="category" aria-label="Category">
+    <option value="">All categories</option>
+    {% for c in categories %}
+      <option {% if c.name == category %}selected{% endif %}>{{ c.name }}</option>
+    {% endfor %}
+  </select>
+  <noscript><button type="submit">Filter</button></noscript>
+</form>
+
+<div id="products" class="table-wrap">
+  <table>
+    <thead><tr><th>Name</th><th>Category</th><th>Items</th><th>Specs filled in</th></tr></thead>
+    <tbody>
+      {% for product in products %}
+        {% set fields = product.category.fields if product.category else [] %}
+        {% set filled = product.specs|length %}
+        <tr>
+          <td><a href="{{ url_for('admin.product_edit', product_id=product.id) }}">{{ product.name }}</a></td>
+          <td>{{ product.category.name if product.category else "" }}</td>
+          <td>{{ product.active_items|length }}</td>
+          <td>{% if fields %}{{ filled }} of {{ fields|length }}{% endif %}</td>
+        </tr>
+      {% else %}
+        <tr><td colspan="4">No products found.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <small>{{ products|length }} product{{ "" if products|length == 1 else "s" }}.</small>
+</div>
+{% endblock %}

@@ -32,14 +32,13 @@
 
 <dl class="details">
   <dt>Label</dt><dd><code>{{ label_text(item) }}</code></dd>
-  {% if item.category %}<dt>Category</dt><dd>{{ item.category }}</dd>{% endif %}
   <dt>Container</dt><dd>{{ item.container.name if item.container else "None" }}</dd>
-  {% if item.length_mm or item.width_mm or item.height_mm %}
-    <dt>Size</dt>
-    <dd>{{ item.length_mm or "?" }} × {{ item.width_mm or "?" }} × {{ item.height_mm or "?" }} mm</dd>
-  {% endif %}
-  {% if item.description %}<dt>Description</dt><dd>{{ item.description }}</dd>{% endif %}
+  <dt>Product</dt>
+  <dd><a href="{{ url_for('rental.product_page', product_id=item.product_id) }}">{{ item.product.name }}</a>
+    ({{ item.product.active_items|length }} cop{{ "y" if item.product.active_items|length == 1 else "ies" }})</dd>
 </dl>
+{% set product = item.product %}
+{% include "rental/_product_details.html" %}
 
 {% if g.user and g.user.is_admin %}
   <p><a href="{{ url_for('admin.item_edit', item_id=item.id) }}">Edit item</a></p>

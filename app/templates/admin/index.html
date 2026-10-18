@@ -5,6 +5,7 @@
 {% block admin_content %}
 <h1>Admin</h1>
 <dl class="stats">
+  <div><dt>Products</dt><dd><a href="{{ url_for('admin.product_list') }}">{{ stats["products"] }}</a></dd></div>
   <div><dt>Items</dt><dd><a href="{{ url_for('admin.item_list') }}">{{ stats["items"] }}</a></dd></div>
   <div><dt>Rented out</dt><dd><a href="{{ url_for('admin.rentals') }}">{{ stats["rented"] }}</a></dd></div>
   <div><dt>Containers</dt><dd><a href="{{ url_for('admin.container_list') }}">{{ stats["containers"] }}</a></dd></div>

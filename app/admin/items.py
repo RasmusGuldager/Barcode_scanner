@@ -4,11 +4,11 @@ from flask import abort, flash, redirect, render_template, request, url_for
 from sqlalchemy import or_
 
 from ..extensions import db
-from ..models import Container, Item
-from ..services.codes import new_code
+from ..models import Container, Item, Product, next_item_number
 from ..services.inventory import ItemSearch, categories
 from . import bp
-from .forms import NO_CONTAINER, ItemForm, NewItemForm
+from .forms import NO_CONTAINER, ItemForm
+
 
 def get_item_or_404(item_id: int, in_trash: bool = False) -> Item:
     item = db.get_or_404(Item, item_id)
@@ -28,17 +28,6 @@ def container_choices(item: Item | None = None) -> list[tuple[int, str]]:
     return [(NO_CONTAINER, "No container")] + [(c.id, c.name) for c in containers]
 
 
-def apply_form(form: ItemForm, item: Item) -> None:
-    item.name = form.name.data
-    item.number = form.number.data
-    item.category = form.category.data
-    item.description = form.description.data
-    item.container_id = form.container_id.data or None
-    item.length_mm = form.length_mm.data
-    item.width_mm = form.width_mm.data
-    item.height_mm = form.height_mm.data
-
-
 @bp.get("/items")
 def item_list():
     search = ItemSearch.from_request(request)
@@ -47,42 +36,28 @@ def item_list():
     )
 
 
-@bp.route("/items/new", methods=["GET", "POST"])
-def item_new():
-    form = NewItemForm()
-    form.container_id.choices = container_choices()
-    if form.validate_on_submit():
-        copies = form.copies.data
-        start = form.number.data
-        if copies > 1 and start is None:
-            start = 1
-        for i in range(copies):
-            item = Item(code=new_code(Item))
-            apply_form(form, item)
-            if start is not None:
-                item.number = start + i
-            db.session.add(item)
-        db.session.commit()
-        flash(f"Added {copies} item{'s' if copies > 1 else ''}.", "success")
-        return redirect(url_for(".item_list"))
-    return render_template("admin/item_form.html", form=form, item=None,
-                           categories=categories())
-
-
 @bp.route("/items/<int:item_id>/edit", methods=["GET", "POST"])
 def item_edit(item_id: int):
     item = get_item_or_404(item_id)
     form = ItemForm(obj=item)
+    form.product_id.choices = [
+        (p.id, p.name)
+        for p in db.session.execute(db.select(Product).order_by(Product.name)).scalars()
+    ]
     form.container_id.choices = container_choices(item)
     if request.method == "GET":
         form.container_id.data = item.container_id or NO_CONTAINER
     if form.validate_on_submit():
-        apply_form(form, item)
+        if form.product_id.data != item.product_id:
+            # Moved to another product: take the next number there.
+            item.number = next_item_number(db.session.connection(), form.product_id.data)
+            item.product_id = form.product_id.data
+        item.container_id = form.container_id.data or None
         db.session.commit()
+        db.session.refresh(item)  # load the new product for the message
         flash(f"Saved {item.display_name}.", "success")
         return redirect(url_for(".item_list"))
-    return render_template("admin/item_form.html", form=form, item=item,
-                           categories=categories())
+    return render_template("admin/item_form.html", form=form, item=item)
 
 
 @bp.post("/items/<int:item_id>/trash")

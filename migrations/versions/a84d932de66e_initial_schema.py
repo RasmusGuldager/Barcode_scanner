@@ -1,8 +1,8 @@
 """initial schema
 
-Revision ID: de597b324917
+Revision ID: a84d932de66e
 Revises: 
-Create Date: 2026-10-08 21:39:45.772063
+Create Date: 2026-10-18 22:26:07.129013
 
 """
 from alembic import op
@@ -12,7 +12,7 @@ import app.extensions
 
 
 # revision identifiers, used by Alembic.
-revision = 'de597b324917'
+revision = 'a84d932de66e'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -32,10 +32,10 @@ def upgrade():
     )
     op.create_table('user',
     sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('card_number', sa.String(length=8), nullable=False),
+    sa.Column('card_number', sa.String(length=6), nullable=False),
     sa.Column('name', sa.String(length=100), nullable=True),
     sa.Column('email', sa.String(length=254), nullable=False),
-    sa.Column('study_number', sa.String(length=20), nullable=False),
+    sa.Column('study_number', sa.String(length=8), nullable=False),
     sa.Column('is_admin', sa.Boolean(), nullable=False),
     sa.Column('created_at', app.extensions.UTCDateTime(), nullable=False),
     sa.PrimaryKeyConstraint('id', name=op.f('pk_user')),
@@ -46,7 +46,7 @@ def upgrade():
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('code', sa.String(length=16), nullable=False),
     sa.Column('name', sa.String(length=100), nullable=False),
-    sa.Column('number', sa.Integer(), nullable=True),
+    sa.Column('number', sa.Integer(), nullable=False),
     sa.Column('category', sa.String(length=50), nullable=True),
     sa.Column('description', sa.Text(), nullable=True),
     sa.Column('container_id', sa.Integer(), nullable=True),
@@ -59,7 +59,8 @@ def upgrade():
     sa.ForeignKeyConstraint(['container_id'], ['container.id'], name=op.f('fk_item_container_id_container'), ondelete='SET NULL'),
     sa.PrimaryKeyConstraint('id', name=op.f('pk_item')),
     sa.UniqueConstraint('code', name=op.f('uq_item_code')),
-    sa.UniqueConstraint('container_id', name=op.f('uq_item_container_id'))
+    sa.UniqueConstraint('container_id', name=op.f('uq_item_container_id')),
+    sa.UniqueConstraint('name', 'number', name=op.f('uq_item_name_number'))
     )
     op.create_table('comment',
     sa.Column('id', sa.Integer(), nullable=False),

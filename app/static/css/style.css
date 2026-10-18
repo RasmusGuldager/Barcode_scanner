@@ -268,3 +268,117 @@ article.note footer {
   border: none;
   background: none;
 }
+
+/* Similar names while adding an item */
+
+.similar ul {
+  margin: -0.5rem 0 1rem;
+  padding: 0;
+}
+
+.similar li {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.25rem 0;
+  border-bottom: 1px solid var(--pico-muted-border-color);
+  list-style: none;
+}
+
+.similar a {
+  white-space: nowrap;
+}
+
+/* Products and spec fields (admin) */
+
+.grid-specs {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr));
+  gap: 0 1rem;
+  margin-top: 0.5rem;
+}
+
+/* A single input with its button beside it, e.g. "Add copies". */
+.add-copies {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0 1rem;
+}
+
+.add-copies label {
+  flex: 0 1 16rem;
+}
+
+.add-copies button {
+  width: auto;
+  margin-bottom: var(--pico-spacing);
+}
+
+form.option-rename {
+  display: flex;
+  gap: 0.5rem;
+}
+
+form.option-rename input {
+  margin: 0;
+  padding: 0.25rem 0.5rem;
+  height: auto;
+}
+
+/* Item list: category tabs, filters beside the results on wide screens */
+
+.category-tabs ul:first-of-type {
+  flex-wrap: wrap;
+  margin-left: 0;
+}
+
+.category-tabs li {
+  padding: 0.25rem 1rem 0.25rem 0;
+}
+
+.category-tabs a[aria-current="page"] {
+  font-weight: 700;
+  text-decoration: underline;
+}
+
+/* minmax(0, ...) lets the column shrink below the table's width, so a wide
+   table scrolls inside .table-wrap instead of widening the page. */
+.browse {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0 2rem;
+}
+
+@media (min-width: 768px) {
+  .browse {
+    grid-template-columns: 16rem minmax(0, 1fr);
+    align-items: start;
+  }
+}
+
+.filter-panel fieldset {
+  margin-bottom: 0.75rem;
+}
+
+.filter-panel legend {
+  font-weight: 700;
+}
+
+.spec-filters summary {
+  font-weight: 700;
+}
+
+.range {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+
+.range input {
+  margin-bottom: 0;
+}
+
+.muted {
+  color: var(--pico-muted-color);
+}

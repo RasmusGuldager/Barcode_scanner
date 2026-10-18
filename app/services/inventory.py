@@ -1,22 +1,23 @@
-"""Searching the inventory, shared by the public and the admin item lists."""
+"""Searching the inventory for the admin pages."""
 
+import difflib
 from dataclasses import dataclass
 
 from flask import Request
 from sqlalchemy import or_
 
 from ..extensions import db
-from ..models import Container, Item
+from ..models import Category, Container, Item, Product
 
 # Sort key -> column. Ties are broken by name and number.
 SORTS = {
-    "name": Item.name,
+    "name": Product.name,
     "code": Item.code,
-    "category": Item.category,
+    "category": Category.name,
     "container": Container.name,
-    "length": Item.length_mm,
-    "width": Item.width_mm,
-    "height": Item.height_mm,
+    "length": Product.length_mm,
+    "width": Product.width_mm,
+    "height": Product.height_mm,
 }
 
 
@@ -40,20 +41,26 @@ class ItemSearch:
         )
 
     def run(self) -> list[Item]:
-        stmt = db.select(Item).outerjoin(Item.container).where(Item.deleted_at.is_(None))
+        stmt = (
+            db.select(Item)
+            .join(Item.product)
+            .outerjoin(Product.category)
+            .outerjoin(Item.container)
+            .where(Item.deleted_at.is_(None))
+        )
         if self.q:
             pattern = f"%{self.q}%"
             stmt = stmt.where(
                 or_(
-                    Item.name.ilike(pattern),
+                    Product.name.ilike(pattern),
                     Item.code.ilike(pattern),
-                    Item.category.ilike(pattern),
-                    Item.description.ilike(pattern),
+                    Category.name.ilike(pattern),
+                    Product.description.ilike(pattern),
                     Container.name.ilike(pattern),
                 )
             )
         if self.category:
-            stmt = stmt.where(Item.category == self.category)
+            stmt = stmt.where(Category.name == self.category)
         if self.container == "with":
             stmt = stmt.where(Item.container_id.is_not(None))
         elif self.container == "without":
@@ -62,15 +69,31 @@ class ItemSearch:
         column = SORTS[self.sort]
         # Empty values (e.g. unknown size) always go last.
         order = (column.desc() if self.descending else column.asc()).nulls_last()
-        return db.session.execute(stmt.order_by(order, Item.name, Item.number)).scalars().all()
+        return db.session.execute(stmt.order_by(order, Product.name, Item.number)).scalars().all()
 
 
-def categories() -> list[str]:
-    return list(
-        db.session.execute(
-            db.select(Item.category)
-            .where(Item.category.is_not(None), Item.deleted_at.is_(None))
-            .distinct()
-            .order_by(Item.category)
-        ).scalars()
-    )
+def categories() -> list[Category]:
+    return db.session.execute(db.select(Category).order_by(Category.name)).scalars().all()
+
+
+def similar_products(query: str, limit: int = 6) -> list[Product]:
+    """Existing products with a name like ``query``, best matches first.
+
+    Names containing the query come first, then names that are merely close
+    (typos such as "Balser"). Used while typing the name of a new product.
+    """
+    query = query.strip().casefold()
+    if len(query) < 2:
+        return []
+    products = db.session.execute(db.select(Product)).scalars().all()
+
+    def score(product: Product) -> float:
+        name = product.name.casefold()
+        if name == query:
+            return 3
+        if query in name:
+            return 2
+        return difflib.SequenceMatcher(None, query, name).ratio()
+
+    ranked = sorted((p for p in products if score(p) >= 0.6), key=score, reverse=True)
+    return ranked[:limit]

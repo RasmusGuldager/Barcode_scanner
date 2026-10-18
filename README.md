@@ -61,3 +61,9 @@ docker compose exec flask_app flask make-admin you@example.com
 ```
 
 After that, admins can promote other users from the admin pages.
+
+To delete a user (only possible if they have no rentals or notes):
+
+```
+docker compose exec flask_app flask delete-user 123456          # card number or email
+```

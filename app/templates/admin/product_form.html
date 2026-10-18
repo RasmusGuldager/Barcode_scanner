@@ -1,0 +1,104 @@
+{% extends "admin/base.html" %}
+{% from "_macros.html" import field, post_button %}
+
+{% block title %}{{ product.name if product else "Add product" }}{% endblock %}
+
+{% block admin_content %}
+<h1>{{ product.name if product else "Add product" }}</h1>
+{% if not product %}
+  <p>To add more copies of something you already have, open its product and use
+    "Add copies" instead.</p>
+{% endif %}
+
+<form method="post" novalidate>
+  {{ form.hidden_tag() }}
+  {% if product %}
+    {{ field(form.name) }}
+  {% else %}
+    {# While typing, show existing products with a similar name (htmx). #}
+    {{ field(form.name, autocomplete="off",
+             data_hx_get=url_for("admin.product_similar"),
+             data_hx_trigger="input changed delay:250ms",
+             data_hx_target="#similar", data_hx_swap="outerHTML") }}
+    {% include "admin/_similar.html" %}
+  {% endif %}
+  <div class="grid-2">
+    {# Changing the category swaps in that category's spec inputs (htmx). #}
+    {{ field(form.category,
+             data_hx_get=url_for("admin.product_spec_inputs", product=product.id if product else None),
+             data_hx_trigger="change", data_hx_target="#specs", data_hx_swap="outerHTML") }}
+    <div id="new-category" {% if form.category.data != "__new__" %}hidden{% endif %}>
+      {{ field(form.new_category, placeholder="e.g. Camera") }}
+    </div>
+  </div>
+  {% include "admin/_spec_inputs.html" %}
+  {{ field(form.description, rows=3) }}
+  <fieldset>
+    <legend>Size</legend>
+    <div class="grid-3">
+      {{ field(form.length_mm, inputmode="numeric") }}
+      {{ field(form.width_mm, inputmode="numeric") }}
+      {{ field(form.height_mm, inputmode="numeric") }}
+    </div>
+  </fieldset>
+  {% if not product %}
+    <div class="grid-2">
+      {{ field(form.copies, inputmode="numeric") }}
+      {{ field(form.container_id) }}
+    </div>
+  {% endif %}
+  <button type="submit">{{ "Save" if product else "Add" }}</button>
+  <a href="{{ url_for('admin.product_list') }}">Cancel</a>
+</form>
+
+{% if product %}
+  <h2 id="copies">Items</h2>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Item</th><th>Code</th><th>Container</th><th>Status</th></tr></thead>
+      <tbody>
+        {% for item in product.items %}
+          <tr>
+            <td>
+              {% if item.in_trash %}
+                {{ item.display_name }} (in trash)
+              {% else %}
+                <a href="{{ url_for('admin.item_edit', item_id=item.id) }}">{{ item.display_name }}</a>
+              {% endif %}
+            </td>
+            <td><code>{{ item.code }}</code></td>
+            <td>{{ item.container.name if item.container else "" }}</td>
+            <td>{{ "Rented by " ~ item.open_rental.user.display_name if item.open_rental else "Available" }}</td>
+          </tr>
+        {% else %}
+          <tr><td colspan="4">No items.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <form method="post" action="{{ url_for('admin.product_add_copies', product_id=product.id) }}"
+        class="add-copies" novalidate>
+    {{ copies_form.hidden_tag() }}
+    {{ field(copies_form.copies, inputmode="numeric") }}
+    <button type="submit">Add copies</button>
+  </form>
+
+  {% if not product.items %}
+    <hr>
+    {{ post_button(url_for('admin.product_delete', product_id=product.id), "Delete product",
+                   confirm="Delete " ~ product.name ~ "?", danger=True) }}
+  {% endif %}
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // Show the "New category" field only when "New category..." is chosen.
+  const category = document.getElementById("category");
+  const newCategory = document.getElementById("new-category");
+  category.addEventListener("change", () => {
+    newCategory.hidden = category.value !== "__new__";
+    if (!newCategory.hidden) newCategory.querySelector("input").focus();
+  });
+</script>
+{% endblock %}

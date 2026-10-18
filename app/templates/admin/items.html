@@ -15,7 +15,7 @@
 {% block admin_content %}
 <div class="page-head">
   <h1>Items</h1>
-  <a href="{{ url_for('admin.item_new') }}" role="button">Add item</a>
+  <a href="{{ url_for('admin.product_new') }}" role="button">Add items</a>
 </div>
 
 {# Works as a plain GET form; htmx just updates the table while typing. #}
@@ -27,7 +27,7 @@
   <select name="category" aria-label="Category">
     <option value="">All categories</option>
     {% for c in categories %}
-      <option {% if c == search.category %}selected{% endif %}>{{ c }}</option>
+      <option {% if c.name == search.category %}selected{% endif %}>{{ c.name }}</option>
     {% endfor %}
   </select>
   <select name="container" aria-label="Container">
@@ -59,11 +59,12 @@
         <tr>
           <td><a href="{{ url_for('admin.item_edit', item_id=item.id) }}">{{ item.display_name }}</a></td>
           <td><code>{{ item.code }}</code></td>
-          <td>{{ item.category or "" }}</td>
+          {% set product = item.product %}
+          <td>{{ product.category.name if product.category else "" }}</td>
           <td>{{ item.container.name if item.container else "" }}</td>
-          <td>{{ item.length_mm if item.length_mm is not none }}</td>
-          <td>{{ item.width_mm if item.width_mm is not none }}</td>
-          <td>{{ item.height_mm if item.height_mm is not none }}</td>
+          <td>{{ product.length_mm if product.length_mm is not none }}</td>
+          <td>{{ product.width_mm if product.width_mm is not none }}</td>
+          <td>{{ product.height_mm if product.height_mm is not none }}</td>
           <td>{{ "Rented by " ~ item.open_rental.user.display_name if item.open_rental else "Available" }}</td>
         </tr>
       {% else %}

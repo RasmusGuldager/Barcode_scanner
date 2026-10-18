@@ -1,6 +1,6 @@
 from datetime import UTC, datetime
 
-from app.models import Container, Item
+from app.models import Container, Item, Product
 from app.services.labels import label_text, qr_svg
 
 
@@ -18,8 +18,8 @@ def test_qr_is_regular_version_1():
 def test_label_sheet(client, db, make_user, login):
     login(make_user(is_admin=True))
     box = Container(code="M4T9XC", name="Shelf B3, box 05")
-    item = Item(code="K7F2Q8", name="Basler ace", number=5)
-    trashed = Item(code="TRASH1", name="Old", deleted_at=datetime.now(UTC))
+    item = Item(code="K7F2Q8", product=Product(name="Basler ace"), number=5)
+    trashed = Item(code="TRASH1", product=Product(name="Old"), deleted_at=datetime.now(UTC))
     db.session.add_all([box, item, trashed])
     db.session.commit()
 

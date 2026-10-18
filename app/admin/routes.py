@@ -2,7 +2,7 @@ from flask import render_template
 from sqlalchemy import func
 
 from ..extensions import db
-from ..models import Container, Item, Rental, User
+from ..models import Container, Item, Product, Rental, User
 from . import bp
 
 
@@ -13,6 +13,7 @@ def count(stmt) -> int:
 @bp.get("/")
 def index():
     stats = {
+        "products": count(db.select(func.count(Product.id))),
         "items": count(db.select(func.count(Item.id)).where(Item.deleted_at.is_(None))),
         "rented": count(db.select(func.count(Rental.id)).where(Rental.returned_at.is_(None))),
         "containers": count(db.select(func.count(Container.id))),

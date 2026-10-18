@@ -1,7 +1,7 @@
 from flask import render_template, request
 
 from ..extensions import db
-from ..models import Container, Item
+from ..models import Container, Item, Product
 from ..services.labels import label_text, qr_svg
 from . import bp
 
@@ -10,7 +10,8 @@ from . import bp
 def labels():
     """Choose which labels to print."""
     items = db.session.execute(
-        db.select(Item).where(Item.deleted_at.is_(None)).order_by(Item.name, Item.number)
+        db.select(Item).join(Item.product).where(Item.deleted_at.is_(None))
+        .order_by(Product.name, Item.number)
     ).scalars().all()
     containers = db.session.execute(
         db.select(Container).order_by(Container.name)
@@ -25,8 +26,9 @@ def labels_print():
     container_ids = request.args.getlist("container", type=int)
     items = db.session.execute(
         db.select(Item)
+        .join(Item.product)
         .where(Item.id.in_(item_ids), Item.deleted_at.is_(None))
-        .order_by(Item.name, Item.number)
+        .order_by(Product.name, Item.number)
     ).scalars().all()
     containers = db.session.execute(
         db.select(Container).where(Container.id.in_(container_ids)).order_by(Container.name)

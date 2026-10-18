@@ -6,7 +6,7 @@ import click
 from flask import Flask, current_app
 
 from .extensions import db
-from .models import User
+from .models import Comment, User
 from .services.backup import write_backup
 from .services.transfer import TransferError, export_data, import_data, summary
 
@@ -26,6 +26,37 @@ def register(app: Flask) -> None:
         user.is_admin = True
         db.session.commit()
         click.echo(f"{user.email} is now an admin.")
+
+    @app.cli.command("delete-user")
+    @click.argument("who")
+    @click.option("--yes", is_flag=True, help="Don't ask for confirmation.")
+    def delete_user(who: str, yes: bool) -> None:
+        """Delete the user with card number or email WHO.
+
+        Only users without rentals or notes can be deleted, so history stays intact.
+        """
+        who = who.strip().lower()
+        user = db.session.execute(
+            db.select(User).where((User.card_number == who) | (User.email == who))
+        ).scalar_one_or_none()
+        if user is None:
+            raise click.ClickException(f"No user with card number or email {who}.")
+        if user.rentals or db.session.execute(
+            db.select(Comment.id).filter_by(user_id=user.id)
+        ).first():
+            raise click.ClickException(
+                f"{user.email} has rentals or notes, so they can't be deleted."
+            )
+        other_admins = db.session.execute(
+            db.select(User.id).where(User.is_admin, User.id != user.id)
+        ).first()
+        if user.is_admin and not other_admins:
+            raise click.ClickException(f"{user.email} is the only admin.")
+        if not yes:
+            click.confirm(f"Delete {user.email} (card {user.card_number})?", abort=True)
+        db.session.delete(user)
+        db.session.commit()
+        click.echo(f"Deleted {user.email}.")
 
     @app.cli.command("export")
     @click.argument("path", type=click.Path(dir_okay=False, writable=True, allow_dash=True))

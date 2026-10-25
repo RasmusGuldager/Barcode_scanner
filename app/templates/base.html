@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" href="data:,">
+  <title>{% block title %}{% endblock %}{% if self.title() %} | {% endif %}VAP-LAB Rental</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='vendor/pico.classless.min.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <script src="{{ url_for('static', filename='vendor/htmx.min.js') }}" defer></script>
+</head>
+<body hx-headers='{"X-CSRFToken": "{{ csrf_token() }}"}'>
+  <header>
+    <nav>
+      <ul>
+        <li><a href="{{ url_for('rental.index') }}" class="brand">VAP-LAB Rental</a></li>
+      </ul>
+      <ul>
+        <li><a href="{{ url_for('rental.item_list') }}">Items</a></li>
+        {% if g.user %}
+          <li><a href="{{ url_for('rental.me') }}">My rentals</a></li>
+          {% if g.user.is_admin %}
+            <li><a href="{{ url_for('admin.index') }}">Admin</a></li>
+          {% endif %}
+        {% endif %}
+      </ul>
+    </nav>
+  </header>
+
+  <main>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for category, message in messages %}
+        <p class="flash flash-{{ category }}" role="status">{{ message }}</p>
+      {% endfor %}
+    {% endwith %}
+
+    {% block content %}{% endblock %}
+  </main>
+
+  {% if g.user %}
+    <footer>
+      <form method="post" action="{{ url_for('rental.logout') }}" class="inline">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <small>Signed in as {{ g.user.display_name }}.</small>
+        <button type="submit" class="link">Not you? Sign out</button>
+      </form>
+    </footer>
+  {% endif %}
+
+  {% block scripts %}{% endblock %}
+</body>
+</html>

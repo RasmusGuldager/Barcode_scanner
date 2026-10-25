@@ -1,0 +1,80 @@
+{% extends "admin/base.html" %}
+{% from "_macros.html" import field as form_field, post_button %}
+
+{% block title %}{{ field.name if field else "Add spec field" }}{% endblock %}
+
+{% block admin_content %}
+<p><a href="{{ url_for('admin.category_edit', category_id=category.id) }}">{{ category.name }}</a></p>
+<h1>{{ field.name if field else "Add spec field" }}</h1>
+
+{% if not field %}
+  <p>Types:</p>
+  <ul>
+    <li><strong>Choice</strong>: one of a fixed list, e.g. Global / Rolling. Filtered with
+      checkboxes.</li>
+    <li><strong>Number</strong>: e.g. 60 fps. Filtered with a minimum and maximum.</li>
+    <li><strong>Text</strong>: anything, e.g. the sensor name. Shown and found by the
+      search box, but not a filter.</li>
+  </ul>
+{% else %}
+  <p>{{ kinds[field.kind] }} field, used by {{ in_use }} product{{ "" if in_use == 1 else "s" }}.
+    The type can't be changed.</p>
+{% endif %}
+
+<form method="post" novalidate>
+  {{ form.hidden_tag() }}
+  {{ form_field(form.name) }}
+  {% if not field %}
+    {{ form_field(form.kind) }}
+    {{ form_field(form.unit) }}
+    {{ form_field(form.options, rows=4) }}
+  {% elif field.kind == "number" %}
+    {{ form_field(form.unit) }}
+  {% endif %}
+  <button type="submit">{{ "Save" if field else "Add" }}</button>
+  <a href="{{ url_for('admin.category_edit', category_id=category.id) }}">Cancel</a>
+</form>
+
+{% if field and field.kind == "choice" %}
+  <h2>Options</h2>
+  <p>Renaming an option keeps it on every product that has it.</p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Option</th><th>Products</th><th></th></tr></thead>
+      <tbody>
+        {% for option in field.options %}
+          <tr>
+            <td>
+              <form method="post" action="{{ url_for('admin.option_rename', option_id=option.id) }}"
+                    class="inline option-rename">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input name="label" value="{{ option.label }}" maxlength="50" required
+                       aria-label="Name of option {{ option.label }}">
+                <button type="submit" class="secondary">Rename</button>
+              </form>
+            </td>
+            <td>{{ option_use[option.id] }}</td>
+            <td class="actions">
+              {{ post_button(url_for('admin.option_delete', option_id=option.id), "Delete",
+                             confirm="Delete the option " ~ option.label ~ "? " ~ option_use[option.id] ~ " product(s) will have an unknown " ~ field.name ~ ".",
+                             danger=True) }}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <form method="post" action="{{ url_for('admin.option_add', field_id=field.id) }}" class="add-copies" novalidate>
+    {{ option_form.hidden_tag() }}
+    {{ form_field(option_form.label, placeholder="New option") }}
+    <button type="submit">Add option</button>
+  </form>
+{% endif %}
+
+{% if field %}
+  <hr>
+  {{ post_button(url_for('admin.field_delete', field_id=field.id), "Delete field",
+                 confirm="Delete the field " ~ field.name ~ "? Its values on " ~ in_use ~ " product(s) are deleted too.",
+                 danger=True) }}
+{% endif %}
+{% endblock %}

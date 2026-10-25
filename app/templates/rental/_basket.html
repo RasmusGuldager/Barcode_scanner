@@ -1,0 +1,26 @@
+{% from "_macros.html" import message_box %}
+<section id="basket">
+  {{ message_box(message, category) }}
+
+  {% if basket %}
+    <ul class="scan-list">
+      {% for item in basket %}
+        <li>
+          <span>
+            {{ item.display_name }}
+            {% if item.container %}<small>from {{ item.container.name }}</small>{% endif %}
+          </span>
+          <button type="button" class="link"
+                  hx-post="{{ url_for('rental.rent_remove', item_id=item.id) }}"
+                  hx-target="#basket" hx-swap="outerHTML">Remove</button>
+        </li>
+      {% endfor %}
+    </ul>
+    <form method="post" action="{{ url_for('rental.rent_confirm') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button type="submit">Rent {{ basket|length }} item{{ "" if basket|length == 1 else "s" }}</button>
+    </form>
+  {% else %}
+    <p>No items scanned yet.</p>
+  {% endif %}
+</section>

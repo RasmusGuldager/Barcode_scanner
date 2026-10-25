@@ -1,0 +1,5 @@
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+# SQLAlchemy warnings usually point at real bugs (e.g. stale session state).
+filterwarnings = ["error::sqlalchemy.exc.SAWarning"]

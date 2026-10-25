@@ -1,0 +1,77 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Items{% endblock %}
+
+{% macro sort_header(key, label) %}
+  {% set active = search.sort == key %}
+  {% set next_dir = "asc" if active and search.descending else ("desc" if active else "asc") %}
+  <th {% if active %}aria-sort="{{ 'descending' if search.descending else 'ascending' }}"{% endif %}>
+    <a href="{{ url_for('admin.item_list', **dict(request.args, sort=key, dir=next_dir)) }}">
+      {{ label }}{% if active %} {{ "▼" if search.descending else "▲" }}{% endif %}
+    </a>
+  </th>
+{% endmacro %}
+
+{% block admin_content %}
+<div class="page-head">
+  <h1>Items</h1>
+  <a href="{{ url_for('admin.product_new') }}" role="button">Add items</a>
+</div>
+
+{# Works as a plain GET form; htmx just updates the table while typing. #}
+<form method="get" class="filters"
+      hx-get="{{ url_for('admin.item_list') }}" hx-target="#items" hx-select="#items"
+      hx-swap="outerHTML" hx-push-url="true" hx-trigger="input changed delay:300ms, change">
+  <input type="search" name="q" value="{{ search.q }}" placeholder="Search name, code, category, container"
+         aria-label="Search">
+  <select name="category" aria-label="Category">
+    <option value="">All categories</option>
+    {% for c in categories %}
+      <option {% if c.name == search.category %}selected{% endif %}>{{ c.name }}</option>
+    {% endfor %}
+  </select>
+  <select name="container" aria-label="Container">
+    <option value="">Any container</option>
+    <option value="with" {% if search.container == "with" %}selected{% endif %}>In a container</option>
+    <option value="without" {% if search.container == "without" %}selected{% endif %}>No container</option>
+  </select>
+  <input type="hidden" name="sort" value="{{ search.sort }}">
+  <input type="hidden" name="dir" value="{{ 'desc' if search.descending else 'asc' }}">
+  <noscript><button type="submit">Filter</button></noscript>
+</form>
+
+<div id="items" class="table-wrap">
+  <table>
+    <thead>
+      <tr>
+        {{ sort_header("name", "Name") }}
+        {{ sort_header("code", "Code") }}
+        {{ sort_header("category", "Category") }}
+        {{ sort_header("container", "Container") }}
+        {{ sort_header("length", "L") }}
+        {{ sort_header("width", "W") }}
+        {{ sort_header("height", "H") }}
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in items %}
+        <tr>
+          <td><a href="{{ url_for('admin.item_edit', item_id=item.id) }}">{{ item.display_name }}</a></td>
+          <td><code>{{ item.code }}</code></td>
+          {% set product = item.product %}
+          <td>{{ product.category.name if product.category else "" }}</td>
+          <td>{{ item.container.name if item.container else "" }}</td>
+          <td>{{ product.length_mm if product.length_mm is not none }}</td>
+          <td>{{ product.width_mm if product.width_mm is not none }}</td>
+          <td>{{ product.height_mm if product.height_mm is not none }}</td>
+          <td>{{ "Rented by " ~ item.open_rental.user.display_name if item.open_rental else "Available" }}</td>
+        </tr>
+      {% else %}
+        <tr><td colspan="8">No items found.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <small>{{ items|length }} item{{ "" if items|length == 1 else "s" }}. Sizes in mm.</small>
+</div>
+{% endblock %}

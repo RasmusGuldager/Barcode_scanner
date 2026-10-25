@@ -1,0 +1,55 @@
+{% extends "admin/base.html" %}
+{% from "_macros.html" import field, post_button %}
+
+{% block title %}{{ category.name }}{% endblock %}
+
+{% block admin_content %}
+<h1>{{ category.name }}</h1>
+
+<h2>Spec fields</h2>
+<p>Shown in this order on the product form, as columns in the item list, and as
+filters.</p>
+<div class="table-wrap">
+  <table>
+    <thead><tr><th>Field</th><th>Type</th><th>Options</th><th>Order</th></tr></thead>
+    <tbody>
+      {% for f in category.fields %}
+        <tr>
+          <td><a href="{{ url_for('admin.field_edit', field_id=f.id) }}">{{ f.label }}</a></td>
+          <td>{{ kinds[f.kind] }}</td>
+          <td>{{ f.options|map(attribute="label")|join(", ") }}</td>
+          <td class="actions">
+            {% set first, last = loop.first, loop.last %}
+            {% for direction, label in [("up", "Up"), ("down", "Down")] %}
+              {% set at_end = first if direction == "up" else last %}
+              <form method="post" action="{{ url_for('admin.field_move', field_id=f.id) }}" class="inline">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="direction" value="{{ direction }}">
+                <button type="submit" class="secondary" {% if at_end %}disabled{% endif %}
+                        aria-label="Move {{ f.name }} {{ direction }}">{{ label }}</button>
+              </form>
+            {% endfor %}
+          </td>
+        </tr>
+      {% else %}
+        <tr><td colspan="4">No spec fields yet.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+<p><a href="{{ url_for('admin.field_new', category_id=category.id) }}" role="button">Add spec field</a></p>
+
+<h2>Rename</h2>
+<form method="post" class="add-copies" novalidate>
+  {{ form.hidden_tag() }}
+  {{ field(form.name) }}
+  <button type="submit">Save</button>
+</form>
+
+<hr>
+<p>{{ category.products|length }} product{{ "" if category.products|length == 1 else "s" }}
+  in this category.</p>
+{{ post_button(url_for('admin.category_delete', category_id=category.id), "Delete category",
+               confirm="Delete " ~ category.name ~ "? Its products are kept, but lose their category and all values of its spec fields.",
+               danger=True) }}
+{% endblock %}

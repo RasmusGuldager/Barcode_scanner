@@ -1,0 +1,38 @@
+{% extends "admin/base.html" %}
+{% from "_macros.html" import post_button %}
+
+{% block title %}Users{% endblock %}
+
+{% block admin_content %}
+<h1>Users</h1>
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr><th>Email</th><th>Name</th><th>Study no.</th><th>Card</th><th>Registered</th><th>Role</th><th></th></tr>
+    </thead>
+    <tbody>
+      {% for user in users %}
+        <tr>
+          <td><a href="{{ url_for('admin.user_edit', user_id=user.id) }}">{{ user.email }}</a></td>
+          <td>{{ user.name or "" }}</td>
+          <td>{{ user.study_number }}</td>
+          <td><code>{{ user.card_number }}</code></td>
+          <td>{{ user.created_at|localtime("%d-%m-%Y") }}</td>
+          <td>{{ "Admin" if user.is_admin else "User" }}</td>
+          <td class="actions">
+            {% if not user.is_admin %}
+              {{ post_button(url_for('admin.user_promote', user_id=user.id), "Make admin",
+                             confirm="Make " ~ user.display_name ~ " an admin?") }}
+            {% elif user.id != g.user.id %}
+              {{ post_button(url_for('admin.user_demote', user_id=user.id), "Remove admin",
+                             confirm="Remove admin rights from " ~ user.display_name ~ "?") }}
+            {% endif %}
+          </td>
+        </tr>
+      {% else %}
+        <tr><td colspan="7">No users yet.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

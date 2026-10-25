@@ -1,0 +1,52 @@
+{% extends "admin/base.html" %}
+{% from "_macros.html" import post_button %}
+
+{% block title %}Export and import{% endblock %}
+
+{% block admin_content %}
+<h1>Export and import</h1>
+
+<section>
+  <h2>Export</h2>
+  <p>Download everything (users, items, containers, rentals and notes) as one JSON
+  file. It can be imported here or on another computer.</p>
+  <a href="{{ url_for('admin.data_export') }}" role="button">Download export</a>
+</section>
+
+<section>
+  <h2>Import</h2>
+  <form method="post" action="{{ url_for('admin.data_import') }}" enctype="multipart/form-data">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label>Export file
+      <input type="file" name="file" accept=".json,application/json" required>
+    </label>
+    <fieldset>
+      <legend>Mode</legend>
+      <label><input type="radio" name="mode" value="merge" checked>
+        Merge: add new records and update existing ones. Nothing is deleted.</label>
+      <label><input type="radio" name="mode" value="replace">
+        Replace: delete everything in this database first, then load the file.</label>
+    </fieldset>
+    <label><input type="checkbox" name="confirm" value="yes">
+      I understand that "Replace" deletes all current data.</label>
+    <button type="submit">Import</button>
+  </form>
+  <p><small>If anything in the file is wrong, nothing is imported.</small></p>
+</section>
+
+<section>
+  <h2>Backups</h2>
+  <p>A backup is made automatically once a day. The newest 30 are kept on the server.
+  To restore one, download it and import it with "Replace".</p>
+  {{ post_button(url_for('admin.backup_now'), "Make a backup now") }}
+  {% if backups %}
+    <ul>
+      {% for path in backups %}
+        <li><a href="{{ url_for('admin.backup_download', name=path.name) }}">{{ path.name }}</a></li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p>No backups yet.</p>
+  {% endif %}
+</section>
+{% endblock %}

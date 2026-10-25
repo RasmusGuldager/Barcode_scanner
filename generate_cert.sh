@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e  # stop at the first error instead of reporting success
 
 echo "Creating certs directory..."
 # The -p flag means "create it if it doesn't exist, and don't error if it does"

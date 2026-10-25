@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block title %}{{ product.name }}{% endblock %}
+
+{% block content %}
+{% set items = product.active_items %}
+{% set available = items|rejectattr("open_rental")|list|length %}
+<h1>{{ product.name }}</h1>
+<p class="status">{{ available }} of {{ items|length }} available</p>
+
+{% include "rental/_product_details.html" %}
+
+{% if g.user and g.user.is_admin %}
+  <p><a href="{{ url_for('admin.product_edit', product_id=product.id) }}">Edit product</a></p>
+{% endif %}
+
+<h2>Copies</h2>
+<div class="table-wrap">
+  <table>
+    <thead><tr><th>Item</th><th>Status</th><th>Container</th></tr></thead>
+    <tbody>
+      {% for item in items %}
+        {% set rental = item.open_rental %}
+        <tr>
+          <td><a href="{{ url_for('rental.item_page', code=item.code) }}">{{ item.display_name }}</a></td>
+          <td>
+            {% if rental is none %}
+              Available
+            {% elif g.user and rental.user_id == g.user.id %}
+              Rented by you
+            {% elif g.user and g.user.is_admin %}
+              Rented by {{ rental.user.display_name }}
+            {% else %}
+              Rented out
+            {% endif %}
+          </td>
+          <td>{{ item.container.name if item.container else "" }}</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

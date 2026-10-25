@@ -1,0 +1,5 @@
+{% if error %}
+  <p class="flash flash-error" role="status">{{ error }}</p>
+{% else %}
+  <p class="flash flash-success" role="status">Thanks, your note on {{ item.display_name }} is saved.</p>
+{% endif %}

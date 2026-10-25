@@ -1,0 +1,384 @@
+/* Small additions on top of Pico (classless). Keep this file short. */
+
+nav .brand {
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.flash {
+  padding: 0.75rem 1rem;
+  border-left: 4px solid var(--pico-primary);
+  background: var(--pico-card-background-color);
+}
+
+.flash-error {
+  border-left-color: var(--pico-del-color);
+}
+
+.flash-success {
+  border-left-color: var(--pico-ins-color);
+}
+
+small.error {
+  color: var(--pico-del-color);
+}
+
+/* Wide tables scroll sideways on phones instead of widening the page. */
+.table-wrap {
+  overflow-x: auto;
+}
+
+.table-wrap td:first-child,
+.table-wrap td code {
+  white-space: nowrap;
+}
+
+.page-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.page-head h1 {
+  margin: 0;
+}
+
+.subnav ul {
+  flex-wrap: wrap;
+}
+
+.subnav a[aria-current="page"] {
+  font-weight: 700;
+  text-decoration: underline;
+}
+
+.filters {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr;
+  gap: 0 1rem;
+}
+
+.grid-2,
+.grid-3 {
+  display: grid;
+  gap: 0 1rem;
+}
+
+.grid-2 {
+  grid-template-columns: 2fr 1fr;
+}
+
+.grid-3 {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+@media (max-width: 600px) {
+  .filters,
+  .grid-2 {
+    grid-template-columns: 1fr;
+  }
+}
+
+form.inline {
+  display: inline-block;
+  margin: 0;
+}
+
+form.inline button {
+  margin: 0;
+  padding: 0.25rem 0.75rem;
+}
+
+td.actions {
+  white-space: nowrap;
+}
+
+button.danger {
+  background-color: var(--pico-del-color);
+  border-color: var(--pico-del-color);
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr));
+  gap: 1rem;
+}
+
+.stats > div {
+  padding: 1rem;
+  background: var(--pico-card-background-color);
+  border-radius: var(--pico-border-radius);
+}
+
+.stats dt {
+  font-weight: 400;
+}
+
+.stats dd {
+  margin: 0;
+  font-size: 1.75rem;
+  font-weight: 700;
+}
+
+/* Buttons that look like links, and secondary buttons (not in classless Pico). */
+button.link {
+  width: auto;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--pico-primary);
+  text-decoration: underline;
+}
+
+button.secondary,
+[role="button"].secondary {
+  background-color: var(--pico-secondary-background, #5d6b89);
+  border-color: var(--pico-secondary-border, #5d6b89);
+  color: #fff;
+}
+
+footer {
+  padding-top: 0;
+}
+
+footer form.inline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+
+footer form.inline button.link {
+  padding: 0;
+}
+
+.actions-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+/* Scanner */
+
+.scanner {
+  max-width: 28rem;
+  margin: 0 auto 1rem;
+}
+
+.scanner > div {
+  overflow: hidden;
+  border-radius: var(--pico-border-radius);
+}
+
+.scanner video {
+  display: block;
+  width: 100%;
+}
+
+.code-entry {
+  display: flex;
+  gap: 0.5rem;
+  max-width: 28rem;
+  margin: 0 auto 1.5rem;
+}
+
+.code-entry input {
+  margin: 0;
+}
+
+.code-entry button {
+  width: auto;
+  margin: 0;
+}
+
+.scan-list {
+  padding: 0;
+}
+
+.scan-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--pico-muted-border-color);
+  list-style: none;
+}
+
+.scan-list small {
+  display: block;
+  color: var(--pico-muted-color);
+}
+
+.next-step {
+  border-left: 4px solid var(--pico-primary);
+}
+
+.status {
+  font-weight: 700;
+}
+
+.details {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.25rem 1rem;
+}
+
+.details dt {
+  font-weight: 400;
+  color: var(--pico-muted-color);
+}
+
+.details dd {
+  margin: 0;
+}
+
+.filters-2 {
+  grid-template-columns: 2fr 1fr;
+}
+
+/* Notes on items */
+
+.note-form button {
+  width: auto;
+}
+
+article.note {
+  margin-bottom: 1rem;
+  padding: 1rem;
+}
+
+article.note p {
+  margin-bottom: 0.5rem;
+  white-space: pre-line;
+}
+
+article.note footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
+}
+
+/* Similar names while adding an item */
+
+.similar ul {
+  margin: -0.5rem 0 1rem;
+  padding: 0;
+}
+
+.similar li {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.25rem 0;
+  border-bottom: 1px solid var(--pico-muted-border-color);
+  list-style: none;
+}
+
+.similar a {
+  white-space: nowrap;
+}
+
+/* Products and spec fields (admin) */
+
+.grid-specs {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr));
+  gap: 0 1rem;
+  margin-top: 0.5rem;
+}
+
+/* A single input with its button beside it, e.g. "Add copies". */
+.add-copies {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0 1rem;
+}
+
+.add-copies label {
+  flex: 0 1 16rem;
+}
+
+.add-copies button {
+  width: auto;
+  margin-bottom: var(--pico-spacing);
+}
+
+form.option-rename {
+  display: flex;
+  gap: 0.5rem;
+}
+
+form.option-rename input {
+  margin: 0;
+  padding: 0.25rem 0.5rem;
+  height: auto;
+}
+
+/* Item list: category tabs, filters beside the results on wide screens */
+
+.category-tabs ul:first-of-type {
+  flex-wrap: wrap;
+  margin-left: 0;
+}
+
+.category-tabs li {
+  padding: 0.25rem 1rem 0.25rem 0;
+}
+
+.category-tabs a[aria-current="page"] {
+  font-weight: 700;
+  text-decoration: underline;
+}
+
+/* minmax(0, ...) lets the column shrink below the table's width, so a wide
+   table scrolls inside .table-wrap instead of widening the page. */
+.browse {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0 2rem;
+}
+
+@media (min-width: 768px) {
+  .browse {
+    grid-template-columns: 16rem minmax(0, 1fr);
+    align-items: start;
+  }
+}
+
+.filter-panel fieldset {
+  margin-bottom: 0.75rem;
+}
+
+.filter-panel legend {
+  font-weight: 700;
+}
+
+.spec-filters summary {
+  font-weight: 700;
+}
+
+.range {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+
+.range input {
+  margin-bottom: 0;
+}
+
+.muted {
+  color: var(--pico-muted-color);
+}

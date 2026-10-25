@@ -1,0 +1,15 @@
+{# Category, specs, size and description of ``product``, shared by the product
+   and item pages. #}
+<dl class="details">
+  {% if product.category %}
+    <dt>Category</dt><dd>{{ product.category.name }}</dd>
+    {% for spec in product.category.fields %}
+      <dt>{{ spec.name }}</dt><dd>{{ product.spec(spec) or "Unknown" }}</dd>
+    {% endfor %}
+  {% endif %}
+  {% if product.length_mm or product.width_mm or product.height_mm %}
+    <dt>Size</dt>
+    <dd>{{ product.length_mm or "?" }} × {{ product.width_mm or "?" }} × {{ product.height_mm or "?" }} mm</dd>
+  {% endif %}
+  {% if product.description %}<dt>Description</dt><dd>{{ product.description }}</dd>{% endif %}
+</dl>

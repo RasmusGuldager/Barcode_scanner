@@ -1,15 +1,28 @@
 services:
   flask_app:
     build: .
+    image: vap-rental
     restart: unless-stopped
     volumes:
       - ./data:/app/data
 
+  # Writes data/backups/rental-<date>.json once a day and keeps the newest 30
+  # (see `flask backup`). A separate service, so the two gunicorn workers don't
+  # both run it. Waits a minute first, so flask_app has created the database.
+  backup:
+    image: vap-rental
+    restart: unless-stopped
+    volumes:
+      - ./data:/app/data
+    command: ["sh", "-c", "sleep 60; while true; do flask backup; sleep 86400; done"]
+    depends_on:
+      - flask_app
+
   nginx:
     image: nginx:alpine
     ports:
-      - "80:80"   # Standard HTTP
-      - "443:443" # Standard HTTPS
+      - "80:80"
+      - "443:443"
     volumes:
       - ./nginx.conf:/etc/nginx/conf.d/default.conf
       - ./certs:/etc/nginx/certs

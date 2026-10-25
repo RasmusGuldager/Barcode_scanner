@@ -1,0 +1,42 @@
+{% from "_macros.html" import message_box %}
+<section id="return-state">
+  {{ message_box(message, category) }}
+
+  {% if returned %}
+    <form id="return-note" class="note-form"
+          hx-post="{{ url_for('rental.comment_add', code=returned.code) }}"
+          hx-target="this" hx-swap="outerHTML">
+      <label>Anything wrong with {{ returned.display_name }}? Leave a note (optional)
+        <textarea name="text" rows="2" maxlength="500"
+                  placeholder="e.g. Lens cap missing"></textarea>
+      </label>
+      <button type="submit" class="secondary">Add note</button>
+    </form>
+  {% endif %}
+
+  {% if pending %}
+    <article class="next-step">
+      <p><strong>Put {{ pending.display_name }} in {{ pending.container.name }}</strong>,
+      then scan the label on the container.</p>
+      <button type="button" class="secondary"
+              hx-post="{{ url_for('rental.return_cancel') }}"
+              hx-target="#return-state" hx-swap="outerHTML">Cancel</button>
+    </article>
+  {% endif %}
+
+  <h2>Still rented by you</h2>
+  {% if still_rented %}
+    <ul class="scan-list">
+      {% for rental in still_rented %}
+        <li>
+          <span>
+            {{ rental.item.display_name }}
+            {% if rental.item.container %}<small>goes in {{ rental.item.container.name }}</small>{% endif %}
+          </span>
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p>Nothing. All your items are returned.</p>
+  {% endif %}
+</section>

@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+
+{% block title %}Items{% endblock %}
+
+{# Link to a category, keeping the search text and the availability choice. #}
+{% macro category_url(name=None) -%}
+  {{ url_for('rental.item_list', category=name, q=search.q or None,
+             available=None if search.available_only else 0) }}
+{%- endmacro %}
+
+{% block content %}
+<h1>Items</h1>
+
+<nav class="category-tabs" aria-label="Categories">
+  <ul>
+    <li><a href="{{ category_url() }}" {% if not search.category %}aria-current="page"{% endif %}>All</a></li>
+    {% for c in categories %}
+      <li><a href="{{ category_url(c.name) }}"
+             {% if search.category and c.id == search.category.id %}aria-current="page"{% endif %}>{{ c.name }}</a></li>
+    {% endfor %}
+  </ul>
+</nav>
+
+<div class="browse">
+  {# Works as a plain GET form; htmx just updates the results while typing. #}
+  <form method="get" class="filter-panel" action="{{ url_for('rental.item_list') }}"
+        hx-get="{{ url_for('rental.item_list') }}" hx-target="#results" hx-select="#results"
+        hx-swap="outerHTML" hx-push-url="true" hx-trigger="input changed delay:300ms, change">
+    {% if search.category %}<input type="hidden" name="category" value="{{ search.category.name }}">{% endif %}
+    <input type="search" name="q" value="{{ search.q }}" placeholder="Search" aria-label="Search">
+    <label>
+      {# The hidden 0 is sent when the box is unticked; ticked, the 1 after it wins. #}
+      <input type="hidden" name="available" value="0">
+      <input type="checkbox" name="available" value="1" role="switch"
+             {% if search.available_only %}checked{% endif %}>
+      Only available now
+    </label>
+
+    {% if search.filters %}
+      <details class="spec-filters" {% if search.active_filters %}open{% endif %}>
+        <summary>Filter by specs{% if search.active_filters %} ({{ search.active_filters|length }}){% endif %}</summary>
+        {% for f in search.filters %}
+          {% set spec = f.field %}
+          <fieldset>
+            <legend>{{ spec.label }}</legend>
+            {% if spec.kind == "choice" %}
+              {% for option in spec.options %}
+                <label>
+                  <input type="checkbox" name="{{ spec.slug }}" value="{{ option.label }}"
+                         {% if option.label in f.options %}checked{% endif %}>
+                  {{ option.label }}
+                </label>
+              {% endfor %}
+            {% else %}
+              <div class="range">
+                <input type="number" step="any" name="{{ spec.slug }}_min" placeholder="Min"
+                       value="{{ '%g'|format(f.low) if f.low is not none }}" aria-label="{{ spec.name }} at least">
+                <input type="number" step="any" name="{{ spec.slug }}_max" placeholder="Max"
+                       value="{{ '%g'|format(f.high) if f.high is not none }}" aria-label="{{ spec.name }} at most">
+              </div>
+            {% endif %}
+          </fieldset>
+        {% endfor %}
+        <a href="{{ category_url(search.category.name) }}">Clear spec filters</a>
+      </details>
+    {% elif not search.category %}
+      <small>Choose a category to filter by its specs.</small>
+    {% endif %}
+    <noscript><button type="submit">Search</button></noscript>
+  </form>
+
+  <div id="results">
+    {% set fields = search.category.fields if search.category else [] %}
+    <p>
+      {{ rows|length }} product{{ "" if rows|length == 1 else "s" }}{% if search.available_only %} with a copy available now{% endif %}.
+      {% if unknown %}
+        <br><small>{{ unknown }} more product{{ " is" if unknown == 1 else "s are" }} not shown
+          because {{ "its" if unknown == 1 else "their" }} specs are missing for these filters.</small>
+      {% endif %}
+    </p>
+    {% if rows %}
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Product</th>
+              {% if not search.category %}<th>Category</th>{% endif %}
+              {% for spec in fields %}<th>{{ spec.label }}</th>{% endfor %}
+              <th>Available</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in rows %}
+              {% set product = row.product %}
+              <tr>
+                <td><a href="{{ url_for('rental.product_page', product_id=product.id) }}">{{ product.name }}</a></td>
+                {% if not search.category %}<td>{{ product.category.name if product.category else "" }}</td>{% endif %}
+                {% for spec in fields %}<td>{{ product.spec(spec) or "" }}</td>{% endfor %}
+                <td class="{{ 'muted' if not row.available }}">{{ row.available }} of {{ row.total }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // On wide screens the spec filters sit in a side column, so keep them open.
+  const specFilters = document.querySelector(".spec-filters");
+  if (specFilters && window.matchMedia("(min-width: 768px)").matches) specFilters.open = true;
+</script>
+{% endblock %}

@@ -1,0 +1,31 @@
+{% extends "admin/base.html" %}
+{% from "_macros.html" import field, post_button %}
+
+{% block title %}{{ item.display_name }}{% endblock %}
+
+{% block admin_content %}
+<h1>{{ item.display_name }}</h1>
+<p>Label <code>{{ label_text(item) }}</code>
+  (<a href="{{ url_for('admin.labels_print', item=item.id) }}" target="_blank">print</a>).
+  {% if item.open_rental %}
+    Rented by {{ item.open_rental.user.display_name }} since
+    {{ item.open_rental.rented_at|localtime }}.
+  {% else %}
+    Available.
+  {% endif %}
+</p>
+<p>Category, specs, description and size are the same for every copy:
+  <a href="{{ url_for('admin.product_edit', product_id=item.product_id) }}">edit the product
+  {{ item.product.name }}</a>.</p>
+
+<form method="post" novalidate>
+  {{ form.hidden_tag() }}
+  {{ field(form.container_id) }}
+  {{ field(form.product_id) }}
+  <button type="submit">Save</button>
+  <a href="{{ url_for('admin.item_list') }}">Cancel</a>
+</form>
+
+<hr>
+{{ post_button(url_for('admin.item_trash', item_id=item.id), "Move to trash", danger=True) }}
+{% endblock %}
